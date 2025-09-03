@@ -79,27 +79,6 @@ class _ManagementState extends State<Management> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Başlık
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF4DB6AC),
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  child: const Text(
-                    'YENİ KONUŞMACI EKLE',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF00695C),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Bölüm
                 const Text(
                   'Bölüm/Pozisyon:',
                   style: TextStyle(

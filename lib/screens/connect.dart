@@ -38,6 +38,8 @@ class _ConnectPageState extends State<ConnectPage> {
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.locationWhenInUse,
+      Permission.location,
+      Permission.bluetooth,
     ].request();
   }
 
@@ -56,7 +58,7 @@ class _ConnectPageState extends State<ConnectPage> {
     } catch (_) {}
   }
 
-  void _getPairedDevices() async {
+  Future<void> _getPairedDevices() async {
     try {
       List<BluetoothDevice> devices = await FlutterBluetoothSerial.instance.getBondedDevices();
       setState(() => _pairedDevicesList = devices);
@@ -94,46 +96,100 @@ class _ConnectPageState extends State<ConnectPage> {
     });
   }
 
-
   void _stopDiscovery() {
     _streamSubscription?.cancel();
     if (mounted) setState(() => _isScanning = false);
   }
 
-  Future<void> _connectToDevice(BluetoothDevice device) async {
+  Future<void> _pairAndConnectToDevice(BluetoothDevice device) async {
     if (_isConnecting) return;
 
-    setState(() {
-      _isConnecting = true;
-    });
+    setState(() => _isConnecting = true);
     _stopDiscovery();
 
     try {
-      if (_connection != null) await _connection!.close();
+      // Önce zaten eşleşmiş mi kontrol et
+      bool alreadyPaired = _pairedDevicesList.any((d) => d.address == device.address);
 
-      BluetoothConnection connection =
-      await BluetoothConnection.toAddress(device.address);
+      if (!alreadyPaired) {
+        // Eşleştirme
+        bool? isPaired = await FlutterBluetoothSerial.instance.bondDeviceAtAddress(device.address);
+        if (isPaired != true) throw Exception("Eşleştirme başarısız");
+
+        // Eşleşmiş cihazları al
+        await _getPairedDevices();
+
+        // Çevredeki cihaz listeden çıkar
+        setState(() {
+          _devicesList.removeWhere((d) => d.address == device.address);
+        });
+      }
+
+      // Güncellenmiş eşleşmiş cihaz referansını al
+      BluetoothDevice deviceToConnect = _pairedDevicesList.firstWhere(
+              (d) => d.address == device.address,
+          orElse: () => device
+      );
+
+      // Mevcut bağlantıyı kapat
+      if (_connection != null) {
+        await _connection!.close();
+        _connection = null;
+      }
+
+      // Yeni bağlantı kur
+      BluetoothConnection connection = await BluetoothConnection.toAddress(deviceToConnect.address);
 
       setState(() {
         _connection = connection;
-        _connectedDevice = device;
+        _connectedDevice = deviceToConnect;
+        _selectedDevice = deviceToConnect; // Güncellenmiş referansı kullan
         _isConnecting = false;
       });
 
-      _connection!.input!.listen((_) {},
-          onDone: () {
-            if (mounted)
-              setState(() {
-                _connection = null;
-                _connectedDevice = null;
-              });
-          });
-    } catch (_) {
+      // Bağlantı durumunu dinle
+      _connection!.input!.listen(
+            (data) {
+          // Veri geldiğinde buraya düşer
+        },
+        onDone: () {
+          if (mounted) {
+            setState(() {
+              _connection = null;
+              _connectedDevice = null;
+            });
+          }
+        },
+        onError: (error) {
+          print('Bağlantı hatası: $error');
+          if (mounted) {
+            setState(() {
+              _connection = null;
+              _connectedDevice = null;
+            });
+          }
+        },
+      );
+
+      print('Bağlantı başarılı: ${deviceToConnect.name ?? deviceToConnect.address}');
+
+    } catch (e) {
       setState(() {
         _isConnecting = false;
         _connection = null;
         _connectedDevice = null;
       });
+      print('Bağlantı hatası: ${e.toString()}');
+
+      if (mounted) {
+        /*ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bağlantı hatası: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );*/
+        print('Bağlantı hatası: ${e.toString()}');
+      }
     }
   }
 
@@ -144,7 +200,10 @@ class _ConnectPageState extends State<ConnectPage> {
         _connection = null;
         _connectedDevice = null;
       });
-    } catch (_) {}
+      print('Bağlantı kesildi');
+    } catch (e) {
+      print('Bağlantı kesme hatası: $e');
+    }
   }
 
   @override
@@ -176,6 +235,32 @@ class _ConnectPageState extends State<ConnectPage> {
                 ],
               ),
             ),
+            if (_isConnecting)
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                color: Colors.blue.withOpacity(0.1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Eşleştiriliyor ve bağlanıyor...',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Container(
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               width: double.infinity,
@@ -184,10 +269,8 @@ class _ConnectPageState extends State<ConnectPage> {
                   if (_connectedDevice != null) {
                     _disconnect();
                     setState(() => _selectedDevice = null);
-                  } else if (_selectedDevice != null &&
-                      _pairedDevicesList.any(
-                              (d) => d.address == _selectedDevice!.address)) {
-                    _connectToDevice(_selectedDevice!);
+                  } else if (_selectedDevice != null && !_isConnecting) {
+                    _pairAndConnectToDevice(_selectedDevice!);
                   }
                 },
                 icon: Icon(
@@ -196,13 +279,13 @@ class _ConnectPageState extends State<ConnectPage> {
                   size: 24,
                 ),
                 label: Text(
-                  _connectedDevice != null
+                  _isConnecting
+                      ? 'İŞLEM YAPILIYOR...'
+                      : _connectedDevice != null
                       ? 'BAĞLANTIYI KES'
-                      : (_selectedDevice != null &&
-                      _pairedDevicesList.any(
-                              (d) => d.address == _selectedDevice!.address))
+                      : (_selectedDevice != null)
                       ? 'BAĞLAN'
-                      : 'EŞLEŞMİŞ CİHAZ SEÇİN',
+                      : 'CİHAZ SEÇİN',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -211,11 +294,11 @@ class _ConnectPageState extends State<ConnectPage> {
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: _connectedDevice != null
+                  backgroundColor: _isConnecting
+                      ? Colors.grey
+                      : _connectedDevice != null
                       ? Colors.red
-                      : (_selectedDevice != null &&
-                      _pairedDevicesList.any(
-                              (d) => d.address == _selectedDevice!.address))
+                      : (_selectedDevice != null)
                       ? Color(0xFF546E7A)
                       : Colors.grey,
                   foregroundColor: Colors.white,
@@ -232,11 +315,12 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget _buildCardSection(
       String title, List<BluetoothDevice> devices, bool isNearby,
       {double maxHeight = 200}) {
-    bool isPaired = title == 'EŞLEŞMİŞ KÜRSÜLER';
+    bool isPaired = title == 'EŞLEŞMİŞ CİHAZLAR';
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
-    IconData titleIcon =
-    isPaired ? const IconData(0xe0e6, fontFamily: 'MaterialIcons') : Icons.bluetooth;
+
+    // Başlık ikonu
+    IconData titleIcon = isPaired ? Icons.bluetooth_searching : Icons.bluetooth;
 
     return Container(
       width: double.infinity,
@@ -289,6 +373,7 @@ class _ConnectPageState extends State<ConnectPage> {
               ],
             ),
           ),
+          // Liste kısmı
           Container(
             height: maxHeight,
             child: devices.isEmpty
@@ -297,7 +382,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isNearby ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
+                    isNearby ? Icons.bluetooth : Icons.bluetooth_searching,
                     size: 48,
                     color: Colors.grey[400],
                   ),
@@ -323,9 +408,7 @@ class _ConnectPageState extends State<ConnectPage> {
                   bool isSelected = _selectedDevice?.address == device.address;
                   return GestureDetector(
                     onTap: () {
-                      if (!isConnected && !isNearby) {
-                        setState(() => _selectedDevice = device);
-                      }
+                      setState(() => _selectedDevice = device);
                     },
                     child: _buildDeviceItem(
                       "${index + 1}. ${device.name ?? device.address}",
