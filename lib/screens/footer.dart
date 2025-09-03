@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'management.dart';
 import 'connect.dart';
+import 'settings.dart';
 
 class AppFooter extends StatelessWidget {
   final String activeTab;
@@ -53,18 +54,18 @@ class AppFooter extends StatelessWidget {
                 icon: Icons.settings,
                 label: "AYARLAR",
                 isActive: activeTab == "AYARLAR",
-                /*onTap: () {
+                onTap: () {
                   if (activeTab != "AYARLAR") {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ayarlar sayfası yakında eklenecek')),
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => SettingsPage()),
                     );
                   }
-                },*/
+                },
               ),
             ],
           ),
         ),
-
         Container(
           width: double.infinity,
           color: const Color(0xFF263238),
@@ -77,7 +78,6 @@ class AppFooter extends StatelessWidget {
         ),
       ],
     );
-
   }
 
   Widget buildNavItem(BuildContext context,

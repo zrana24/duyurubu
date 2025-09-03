@@ -10,120 +10,124 @@ class ConnectPage extends StatefulWidget {
 }
 
 class _ConnectPageState extends State<ConnectPage> {
-  BluetoothState _bluetoothState = BluetoothState.UNKNOWN; // Bluetooth mevcut durumu
-  List<BluetoothDevice> _devicesList = []; // Çevredeki cihazlar
-  List<BluetoothDevice> _pairedDevicesList = []; //Eşleşen cihazlar
-  BluetoothConnection? _connection; //Seçilen cihazla bağlantı
-  bool _isConnecting = false; // Bağlantı durumu
-  bool _isScanning = false; // Tarama durumu
-  StreamSubscription<BluetoothDiscoveryResult>? _streamSubscription; // Tarama sonucu
-  BluetoothDevice? _connectedDevice; // Bağlı cihaz
-  BluetoothDevice? _selectedDevice; // Seçilen cihaz
+  BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
+  List<BluetoothDevice> _devicesList = [];
+  List<BluetoothDevice> _pairedDevicesList = [];
+  BluetoothConnection? _connection;
+  bool _isConnecting = false;
+  bool _isScanning = false;
+  StreamSubscription<BluetoothDiscoveryResult>? _streamSubscription;
+  BluetoothDevice? _connectedDevice;
+  BluetoothDevice? _selectedDevice;
 
   @override
-  void initState() { //Sayfa açıldığında
+  void initState() {
     super.initState();
-    _requestPermissions().then((_) => _initBluetooth());  //Bluetooth izinlerini başlatma
+    _requestPermissions().then((_) => _initBluetooth());
   }
 
   @override
-  void dispose() { //Sayfa Kapanırken
-    _streamSubscription?.cancel(); // Tarama sonucu iptal
-    _connection?.dispose(); // Bağlantıyı kapat
+  void dispose() {
+    _streamSubscription?.cancel();
+    _connection?.dispose();
     super.dispose();
   }
 
   Future<void> _requestPermissions() async {
     await [
-      Permission.bluetoothScan, // Cihaz taramak izni
-      Permission.bluetoothConnect, //Cihaza bağlanma izni
-      Permission.locationWhenInUse, //Konum izni
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
     ].request();
   }
 
   void _initBluetooth() async {
     try {
-      BluetoothState state = await FlutterBluetoothSerial.instance.state; //Bluetooth durumu
-      setState(() => _bluetoothState = state); //Bluetooth durumunu güncelleme
+      BluetoothState state = await FlutterBluetoothSerial.instance.state;
+      setState(() => _bluetoothState = state);
+      _getPairedDevices();
+      _startDiscovery();
 
-      _getPairedDevices(); //Eşleşen cihazları alır
-      _startDiscovery(); //Taramayı başlatır
-
-      //Bluetooth durumu değiştiğinde çalışır
       FlutterBluetoothSerial.instance.onStateChanged().listen((BluetoothState state) {
         setState(() => _bluetoothState = state);
-        _getPairedDevices(); //Eşleşen cihazları alır
-        _startDiscovery(); //Taramayı başlatır
+        _getPairedDevices();
+        _startDiscovery();
       });
     } catch (_) {}
   }
 
-  void _getPairedDevices() async { //Eşleşen cihazları listeleme fonksiyonu
+  void _getPairedDevices() async {
     try {
-      List<BluetoothDevice> devices = await FlutterBluetoothSerial.instance.getBondedDevices(); //Eşleşen cihazları alır
-      setState(() => _pairedDevicesList = devices); //Eşleşen cihazları listeye aktar
+      List<BluetoothDevice> devices = await FlutterBluetoothSerial.instance.getBondedDevices();
+      setState(() => _pairedDevicesList = devices);
     } catch (_) {}
   }
 
-  void _startDiscovery() { //Taramayı başlatır
-    if (_isScanning) return; //Tarama zaten devam ediyorsa iptal et
+  void _startDiscovery() {
+    if (_isScanning) return;
 
     setState(() {
       _isScanning = true;
-      _devicesList.clear(); //Önceki listeyi temizler.
+      _devicesList.clear();
     });
 
-    _streamSubscription?.cancel(); // Önceki tarama varsa iptal et
+    _streamSubscription?.cancel();
     _streamSubscription = FlutterBluetoothSerial.instance.startDiscovery().listen((r) {
-      // Eğer cihaz listede varsa güncelle, yoksa ekle
+
+      if (_pairedDevicesList.any((d) => d.address == r.device.address)) return;
+
       final existingIndex = _devicesList.indexWhere((d) => d.address == r.device.address);
       if (existingIndex >= 0) {
         _devicesList[existingIndex] = r.device;
       } else {
         _devicesList.add(r.device);
       }
-      if (mounted) setState(() {});  // Arayüzü günceller
+      if (mounted) setState(() {});
     });
 
-    _streamSubscription!.onDone(() { //Tarama bittiğinde çalışır
-      if (mounted) setState(() => _isScanning = false); //Arayüzü günceller
+    _streamSubscription!.onDone(() {
+      if (mounted) setState(() => _isScanning = false);
     });
 
-    Timer(Duration(seconds: 30), () { // 30 saniye sonra otomatik olarak taramayı durdur
+    Timer(Duration(seconds: 30), () {
       if (_isScanning) _stopDiscovery();
     });
   }
+
 
   void _stopDiscovery() {
     _streamSubscription?.cancel();
     if (mounted) setState(() => _isScanning = false);
   }
 
-  void _connectToDevice(BluetoothDevice device) async {
+  Future<void> _connectToDevice(BluetoothDevice device) async {
     if (_isConnecting) return;
 
-    setState(() => _isConnecting = true);
+    setState(() {
+      _isConnecting = true;
+    });
     _stopDiscovery();
 
     try {
       if (_connection != null) await _connection!.close();
-      BluetoothConnection connection = await BluetoothConnection.toAddress(device.address);
+
+      BluetoothConnection connection =
+      await BluetoothConnection.toAddress(device.address);
+
       setState(() {
         _connection = connection;
         _connectedDevice = device;
         _isConnecting = false;
       });
 
-      _connection!.input!.listen(
-            (_) {},
-        onDone: () {
-          if (mounted) setState(() {
-            _connection = null;
-            _connectedDevice = null;
+      _connection!.input!.listen((_) {},
+          onDone: () {
+            if (mounted)
+              setState(() {
+                _connection = null;
+                _connectedDevice = null;
+              });
           });
-        },
-        onError: (_) {},
-      );
     } catch (_) {
       setState(() {
         _isConnecting = false;
@@ -146,62 +150,78 @@ class _ConnectPageState extends State<ConnectPage> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final double cardPadding = 12;
 
     return Scaffold(
-     backgroundColor: Color(0xFFE0E0E0),
+      backgroundColor: Color(0xFFE0E0E0),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(screenSize.width * 0.04),
-                child: Column(
-                  children: [
-                    SizedBox(height: screenSize.height * 0.01),
-                    _buildCardSection(screenSize, 'EŞLEŞMİŞ KÜRSÜLER', _pairedDevicesList, false),
-                    SizedBox(height: screenSize.height * 0.03),
-                    _buildCardSection(screenSize, 'ÇEVREDEKİ CİHAZLAR', _devicesList, true),
-                    SizedBox(height: screenSize.height * 0.15),
-                  ],
-                ),
+              child: ListView(
+                padding: EdgeInsets.all(16),
+                children: [
+                  _buildCardSection(
+                      'EŞLEŞMİŞ CİHAZLAR',
+                      _pairedDevicesList,
+                      false,
+                      maxHeight: screenSize.height * 0.20),
+                  SizedBox(height: 20),
+                  _buildCardSection(
+                      'ÇEVREDEKİ CİHAZLAR',
+                      _devicesList,
+                      true,
+                      maxHeight: screenSize.height * 0.20),
+                  SizedBox(height: 40),
+                ],
               ),
             ),
-            // Sabit buton
             Container(
-              margin: EdgeInsets.symmetric(horizontal: screenSize.width * 0.05, vertical: 8),
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
                   if (_connectedDevice != null) {
                     _disconnect();
-                    setState(() {
-                      _selectedDevice = null;
-                    });
-                  } else if (_selectedDevice != null) {
+                    setState(() => _selectedDevice = null);
+                  } else if (_selectedDevice != null &&
+                      _pairedDevicesList.any(
+                              (d) => d.address == _selectedDevice!.address)) {
                     _connectToDevice(_selectedDevice!);
                   }
                 },
                 icon: Icon(
                   _connectedDevice != null ? Icons.link_off : Icons.bluetooth,
-                  color: Colors.white, // ikon rengi beyaz
-                  size: screenSize.width * 0.06,
+                  color: Colors.white,
+                  size: 24,
                 ),
                 label: Text(
-                  _connectedDevice != null ? 'BAĞLANTIYI KES' : 'BAĞLAN',
+                  _connectedDevice != null
+                      ? 'BAĞLANTIYI KES'
+                      : (_selectedDevice != null &&
+                      _pairedDevicesList.any(
+                              (d) => d.address == _selectedDevice!.address))
+                      ? 'BAĞLAN'
+                      : 'EŞLEŞMİŞ CİHAZ SEÇİN',
                   style: TextStyle(
-                    fontSize: screenSize.width * 0.045,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white, // yazı rengi beyaz
+                    color: Colors.white,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: screenSize.height * 0.02),
-                  backgroundColor: _connectedDevice != null ? Colors.red : Color(0xFF546E7A),
-                  foregroundColor: Colors.white, // ikon ve yazıyı beyaz yapar
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: _connectedDevice != null
+                      ? Colors.red
+                      : (_selectedDevice != null &&
+                      _pairedDevicesList.any(
+                              (d) => d.address == _selectedDevice!.address))
+                      ? Color(0xFF546E7A)
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
                 ),
               ),
             ),
-
             AppFooter(activeTab: "BAĞLANTI"),
           ],
         ),
@@ -209,23 +229,14 @@ class _ConnectPageState extends State<ConnectPage> {
     );
   }
 
-  Widget _buildCardSection(Size screenSize, String title, List<BluetoothDevice> devices, bool isNearby) {
+  Widget _buildCardSection(
+      String title, List<BluetoothDevice> devices, bool isNearby,
+      {double maxHeight = 200}) {
     bool isPaired = title == 'EŞLEŞMİŞ KÜRSÜLER';
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
-    IconData titleIcon = isPaired
-        ? const IconData(0xe0e6, fontFamily: 'MaterialIcons')
-        : Icons.bluetooth;
-
-    double headerHeight = screenSize.height * 0.05;
-    double deviceItemHeight = screenSize.height * 0.09;
-
-    int maxVisibleDevices = 4;
-
-    bool enableScroll = devices.length > maxVisibleDevices;
-
-    double cardMaxHeight = deviceItemHeight * (devices.length > maxVisibleDevices ? maxVisibleDevices : devices.length)
-        + headerHeight + 16;
+    IconData titleIcon =
+    isPaired ? const IconData(0xe0e6, fontFamily: 'MaterialIcons') : Icons.bluetooth;
 
     return Container(
       width: double.infinity,
@@ -238,80 +249,95 @@ class _ConnectPageState extends State<ConnectPage> {
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: headerHeight * 0.1, horizontal: screenSize.width * 0.03),
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
               color: headerColor,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+              borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14), topRight: Radius.circular(14)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(titleIcon, color: headerTextColor, size: screenSize.width * 0.06),
-                    SizedBox(width: screenSize.width * 0.02),
+                    Icon(titleIcon, color: headerTextColor, size: 24),
+                    SizedBox(width: 8),
                     Text(
                       title,
                       style: TextStyle(
                         color: headerTextColor,
-                        fontSize: screenSize.width * 0.045,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
                 IconButton(
-                  onPressed: _startDiscovery,
-                  icon: Icon(Icons.refresh, color: headerTextColor, size: screenSize.width * 0.06),
+                  onPressed: _isScanning ? null : _startDiscovery,
+                  icon: _isScanning
+                      ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(headerTextColor),
+                    ),
+                  )
+                      : Icon(Icons.refresh, color: headerTextColor, size: 24),
                 ),
               ],
             ),
           ),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: cardMaxHeight,
-            ),
+          Container(
+            height: maxHeight,
             child: devices.isEmpty
                 ? Center(
-              child: Padding(
-                padding: EdgeInsets.all(screenSize.width * 0.04),
-                child: Text(
-                  isNearby ? 'Çevrede cihaz bulunamadı' : 'Eşleşmiş cihaz bulunamadı',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: screenSize.width * 0.045,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isNearby ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
+                    size: 48,
+                    color: Colors.grey[400],
                   ),
-                ),
+                  SizedBox(height: 10),
+                  Text(
+                    isNearby ? 'Çevrede cihaz bulunamadı' : 'Eşleşmiş cihaz bulunamadı',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             )
-                : ListView.builder(
-              physics: enableScroll ? BouncingScrollPhysics() : NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: devices.length,
-              itemBuilder: (context, index) {
-                BluetoothDevice device = devices[index];
-                bool isConnected = _connectedDevice?.address == device.address;
-                bool isSelected = _selectedDevice?.address == device.address;
-                return GestureDetector(
-                  onTap: () {
-                    if (!isConnected) {
-                      setState(() {
-                        _selectedDevice = device;
-                      });
-                    }
-                  },
-                  child: _buildDeviceItem(
-                    "${index + 1}. ${device.name ?? device.address}",
-                    Icons.speaker,
-                    isConnected ? Colors.green : (isNearby ? Colors.grey[700]! : Colors.blue),
-                    isNearby,
-                    screenSize,
-                    device: device,
-                    isConnected: isConnected,
-                    isSelected: isSelected,
-                  ),
-                );
-              },
+                : Scrollbar(
+              thumbVisibility: true,
+              child: ListView.builder(
+                physics: BouncingScrollPhysics(),
+                itemCount: devices.length,
+                itemBuilder: (context, index) {
+                  BluetoothDevice device = devices[index];
+                  bool isConnected = _connectedDevice?.address == device.address;
+                  bool isSelected = _selectedDevice?.address == device.address;
+                  return GestureDetector(
+                    onTap: () {
+                      if (!isConnected && !isNearby) {
+                        setState(() => _selectedDevice = device);
+                      }
+                    },
+                    child: _buildDeviceItem(
+                      "${index + 1}. ${device.name ?? device.address}",
+                      Icons.speaker,
+                      isConnected ? Colors.green : (isNearby ? Colors.grey[700]! : Colors.blue),
+                      device: device,
+                      isConnected: isConnected,
+                      isSelected: isSelected,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -319,58 +345,35 @@ class _ConnectPageState extends State<ConnectPage> {
     );
   }
 
-  Widget _buildDeviceItem(String name, IconData icon, Color iconColor, bool isNearby, Size screenSize,
+  Widget _buildDeviceItem(String name, IconData icon, Color iconColor,
       {BluetoothDevice? device, bool isConnected = false, bool isSelected = false}) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: screenSize.width * 0.03, vertical: screenSize.height * 0.008),
-      padding: EdgeInsets.all(screenSize.width * 0.035),
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isConnected ? Colors.green : Colors.grey[400]!, width: isConnected ? 2 : 1),
+        border: Border.all(
+          color: isConnected ? Colors.green : isSelected ? Colors.blue : Colors.grey[300]!,
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: EdgeInsets.all(screenSize.width * 0.025),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, color: iconColor, size: screenSize.width * 0.07),
-          ),
-          SizedBox(width: screenSize.width * 0.03),
+          Icon(icon, color: iconColor, size: 24),
+          SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    style: TextStyle(
-                        fontSize: screenSize.width * 0.045,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87)),
-                if (device != null && device.address.isNotEmpty)
-                  Text(device.address,
-                      style: TextStyle(fontSize: screenSize.width * 0.037, color: Colors.grey[600])),
-                if (isConnected)
-                  Text('Bağlı',
-                      style: TextStyle(
-                          fontSize: screenSize.width * 0.037, color: Colors.green, fontWeight: FontWeight.bold)),
-              ],
+            child: Text(
+              name,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
             ),
           ),
-          if (device != null)
-            _isConnecting && _connectedDevice?.address == device.address
-                ? SizedBox(
-              width: screenSize.width * 0.06,
-              height: screenSize.width * 0.06,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : Icon(
-              isConnected ? Icons.check_circle : Icons.bluetooth,
-              color: isConnected ? Colors.green : Color(0xFF03A9F4),
-              size: screenSize.width * 0.07,
-            ),
+          if (isConnected)
+            Icon(Icons.link, color: Colors.green, size: 24),
         ],
       ),
     );
