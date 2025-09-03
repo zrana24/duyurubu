@@ -134,7 +134,7 @@ class _ManagementState extends State<Management> {
 
                 // Süre
                 const Text(
-                  'Konuşma Süresi (SS:DD:SS):',
+                  'Sunum Süresi:',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

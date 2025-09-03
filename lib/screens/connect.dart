@@ -315,7 +315,7 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget _buildCardSection(
       String title, List<BluetoothDevice> devices, bool isNearby,
       {double maxHeight = 200}) {
-    bool isPaired = title == 'EŞLEŞMİŞ CİHAZLAR';
+    bool isPaired = title == 'EŞLEŞMİŞ KÜRSÜLER';
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
 
