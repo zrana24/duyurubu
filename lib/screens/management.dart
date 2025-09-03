@@ -37,6 +37,271 @@ class _ManagementState extends State<Management> {
     },
   ];
 
+  // Form için controller'lar
+  final TextEditingController _departmentController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _departmentController.dispose();
+    _nameController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
+  void _showAddSpeakerDialog() {
+    // Form alanlarını temizle
+    _departmentController.clear();
+    _nameController.clear();
+    _timeController.text = '00:30:00';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF4DB6AC),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Başlık
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF4DB6AC),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  child: const Text(
+                    'YENİ KONUŞMACI EKLE',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF00695C),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Bölüm
+                const Text(
+                  'Bölüm/Pozisyon:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _departmentController,
+                  decoration: InputDecoration(
+                    hintText: 'Örn: Satış ve Pazarlama Müdürü',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Ad Soyad
+                const Text(
+                  'Ad Soyad:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    hintText: 'Örn: Ahmet YILMAZ',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Süre
+                const Text(
+                  'Konuşma Süresi (SS:DD:SS):',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _timeController,
+                  decoration: InputDecoration(
+                    hintText: 'Örn: 00:30:00',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Butonlar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade400,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'İPTAL',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _saveSpeaker();
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4DB6AC),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'KAYDET',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _saveSpeaker() {
+    // Form validasyonu
+    if (_departmentController.text.trim().isEmpty ||
+        _nameController.text.trim().isEmpty ||
+        _timeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen tüm alanları doldurun!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Süre formatı validasyonu (SS:DD:SS)
+    String timeText = _timeController.text.trim();
+    RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$');
+
+    if (!timeRegex.hasMatch(timeText)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen geçerli bir süre formatı girin! (SS:DD:SS)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Varsayılan renk seç (döngüsel olarak)
+    Color defaultColor = const Color(0xFF4CAF50);
+    if (speakers.isNotEmpty) {
+      List<Color> colors = [
+        const Color(0xFF4CAF50),
+        const Color(0xFFFF9800),
+        const Color(0xFF2196F3),
+        const Color(0xFFE91E63),
+        const Color(0xFF9C27B0),
+        const Color(0xFF00BCD4),
+        const Color(0xFFFF5722),
+        const Color(0xFF795548),
+      ];
+      defaultColor = colors[speakers.length % colors.length];
+    }
+
+    // Yeni konuşmacı ekle
+    setState(() {
+      speakers.add({
+        "title": _departmentController.text.trim(),
+        "person": _nameController.text.trim(),
+        "time": timeText,
+        "color": '0x${defaultColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}',
+      });
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Konuşmacı başarıyla eklendi!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -113,20 +378,23 @@ class _ManagementState extends State<Management> {
                               ],
                             ),
                           ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.03,
-                              vertical: screenHeight * 0.004,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black, width: 1.5),
-                            ),
-                            child: Text(
-                              'İSİM EKLE AI',
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.032,
-                                color: const Color(0xFF00695C),
-                                fontWeight: FontWeight.w500,
+                          GestureDetector(
+                            onTap: _showAddSpeakerDialog,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.03,
+                                vertical: screenHeight * 0.004,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black, width: 1.5),
+                              ),
+                              child: Text(
+                                'İSİM EKLE AI',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.032,
+                                  color: const Color(0xFF00695C),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
