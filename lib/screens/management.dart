@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'footer.dart'; // Footer import
+import 'footer.dart';
+import 'package:provider/provider.dart';
+import '../language.dart';
 
 class Management extends StatefulWidget {
   const Management({Key? key}) : super(key: key);
@@ -27,17 +29,16 @@ class _ManagementState extends State<Management> {
       "title": "Finans Direktörü",
       "person": "Elif YILMAZ",
       "time": "00:20:00",
-      "color": "0xFF2196F3"
+      "color" : "0xFF4CAF50"
     },
     {
       "title": "İK Müdürü",
       "person": "Ahmet KAYA",
       "time": "00:25:00",
-      "color": "0xFFE91E63"
+      "color" : "0xFFFF9800"
     },
   ];
 
-  // Form için controller'lar
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -50,7 +51,9 @@ class _ManagementState extends State<Management> {
     super.dispose();
   }
 
-  void _showAddSpeakerDialog() {
+  void _showAddSpeakerDialog(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+
     // Form alanlarını temizle
     _departmentController.clear();
     _nameController.clear();
@@ -79,8 +82,8 @@ class _ManagementState extends State<Management> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Bölüm/Pozisyon:',
+                Text(
+                  languageProvider.getTranslation('department'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -91,7 +94,7 @@ class _ManagementState extends State<Management> {
                 TextField(
                   controller: _departmentController,
                   decoration: InputDecoration(
-                    hintText: 'Örn: Satış ve Pazarlama Müdürü',
+                    hintText: languageProvider.getTranslation('department_example'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
@@ -106,8 +109,8 @@ class _ManagementState extends State<Management> {
                 const SizedBox(height: 16),
 
                 // Ad Soyad
-                const Text(
-                  'Ad Soyad:',
+                Text(
+                  languageProvider.getTranslation('name'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -118,7 +121,7 @@ class _ManagementState extends State<Management> {
                 TextField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    hintText: 'Örn: Ahmet YILMAZ',
+                    hintText: languageProvider.getTranslation('name_example'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
@@ -132,9 +135,8 @@ class _ManagementState extends State<Management> {
                 ),
                 const SizedBox(height: 16),
 
-                // Süre
-                const Text(
-                  'Sunum Süresi:',
+                Text(
+                  languageProvider.getTranslation('duration'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -145,7 +147,7 @@ class _ManagementState extends State<Management> {
                 TextField(
                   controller: _timeController,
                   decoration: InputDecoration(
-                    hintText: 'Örn: 00:30:00',
+                    hintText: languageProvider.getTranslation('duration_example'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
@@ -159,7 +161,6 @@ class _ManagementState extends State<Management> {
                 ),
                 const SizedBox(height: 24),
 
-                // Butonlar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -175,8 +176,8 @@ class _ManagementState extends State<Management> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'İPTAL',
+                        child: Text(
+                          languageProvider.getTranslation('cancel'),
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -189,7 +190,7 @@ class _ManagementState extends State<Management> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          _saveSpeaker();
+                          _saveSpeaker(context);
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
@@ -199,8 +200,8 @@ class _ManagementState extends State<Management> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'KAYDET',
+                        child: Text(
+                          languageProvider.getTranslation('save'),
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -219,51 +220,43 @@ class _ManagementState extends State<Management> {
     );
   }
 
-  void _saveSpeaker() {
-    // Form validasyonu
+  void _saveSpeaker(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+
     if (_departmentController.text.trim().isEmpty ||
         _nameController.text.trim().isEmpty ||
         _timeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen tüm alanları doldurun!'),
+        SnackBar(
+          content: Text(languageProvider.getTranslation('fill_all_fields')),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Süre formatı validasyonu (SS:DD:SS)
     String timeText = _timeController.text.trim();
     RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$');
 
     if (!timeRegex.hasMatch(timeText)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen geçerli bir süre formatı girin! (SS:DD:SS)'),
+        SnackBar(
+          content: Text(languageProvider.getTranslation('invalid_time')),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Varsayılan renk seç (döngüsel olarak)
     Color defaultColor = const Color(0xFF4CAF50);
     if (speakers.isNotEmpty) {
       List<Color> colors = [
         const Color(0xFF4CAF50),
         const Color(0xFFFF9800),
-        const Color(0xFF2196F3),
-        const Color(0xFFE91E63),
-        const Color(0xFF9C27B0),
-        const Color(0xFF00BCD4),
-        const Color(0xFFFF5722),
-        const Color(0xFF795548),
       ];
       defaultColor = colors[speakers.length % colors.length];
     }
 
-    // Yeni konuşmacı ekle
     setState(() {
       speakers.add({
         "title": _departmentController.text.trim(),
@@ -274,8 +267,8 @@ class _ManagementState extends State<Management> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Konuşmacı başarıyla eklendi!'),
+      SnackBar(
+        content: Text(languageProvider.getTranslation('added_success')),
         backgroundColor: Colors.green,
       ),
     );
@@ -285,6 +278,7 @@ class _ManagementState extends State<Management> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
@@ -309,7 +303,6 @@ class _ManagementState extends State<Management> {
                 ),
                 child: Column(
                   children: [
-                    // Üst başlık
                     Container(
                       width: double.infinity,
                       padding: EdgeInsets.symmetric(
@@ -329,7 +322,6 @@ class _ManagementState extends State<Management> {
                           Flexible(
                             child: Row(
                               children: [
-                                // Dikdörtgen
                                 Container(
                                   width: screenWidth * 0.15,
                                   height: screenWidth * 0.08,
@@ -346,7 +338,7 @@ class _ManagementState extends State<Management> {
                                 SizedBox(width: screenWidth * 0.03),
                                 Expanded(
                                   child: Text(
-                                    'İSİMLİK EKRANI',
+                                    languageProvider.getTranslation('name_screen'),
                                     style: TextStyle(
                                       fontSize: screenWidth * 0.045,
                                       fontWeight: FontWeight.w700,
@@ -358,7 +350,7 @@ class _ManagementState extends State<Management> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: _showAddSpeakerDialog,
+                            onTap: () => _showAddSpeakerDialog(context),
                             child: Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: screenWidth * 0.03,
@@ -368,7 +360,7 @@ class _ManagementState extends State<Management> {
                                 border: Border.all(color: Colors.black, width: 1.5),
                               ),
                               child: Text(
-                                'İSİM EKLE AI',
+                                languageProvider.getTranslation('add_name'),
                                 style: TextStyle(
                                   fontSize: screenWidth * 0.032,
                                   color: const Color(0xFF00695C),
@@ -406,7 +398,7 @@ class _ManagementState extends State<Management> {
               ),
             ),
           ),
-          AppFooter(activeTab: "YÖNETİM"),
+          AppFooter(activeTab: "management"),
         ],
       ),
     );
@@ -444,7 +436,6 @@ class _AICardState extends State<AICard> {
   @override
   void initState() {
     super.initState();
-    // Zaman formatını parse etme (HH:MM:SS)
     final timeParts = widget.initialTime.split(':');
     _initialDuration = Duration(
       hours: int.parse(timeParts[0]),
@@ -506,6 +497,7 @@ class _AICardState extends State<AICard> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
@@ -527,7 +519,7 @@ class _AICardState extends State<AICard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${widget.number}. KONUŞMACI BİLGİSİ',
+              '${widget.number}. ${languageProvider.getTranslation('speaker_info')}',
               style: TextStyle(
                 fontSize: screenWidth * 0.03,
                 color: Colors.grey[700],

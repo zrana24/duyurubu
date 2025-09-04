@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import '../language.dart';
 import 'footer.dart';
+import 'package:provider/provider.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -18,6 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8EAF6),
@@ -33,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildSettingCard(
                   context,
-                  title: "1. ANA EKRAN",
+                  title: languageProvider.getTranslation('main_screen'),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                   brightnessValue: _screenBrightness1,
@@ -42,12 +44,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       _screenBrightness1 = value;
                     });
                   },
+                  languageProvider: languageProvider,
                 ),
                 SizedBox(height: screenHeight * 0.02),
 
                 _buildSettingCard(
                   context,
-                  title: "2. İSİMLİK EKRAN",
+                  title: languageProvider.getTranslation('name_screen1'),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                   brightnessValue: _screenBrightness2,
@@ -56,26 +59,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       _screenBrightness2 = value;
                     });
                   },
+                  languageProvider: languageProvider,
                 ),
                 SizedBox(height: screenHeight * 0.02),
 
                 _buildSettingCard(
                   context,
-                  title: "3. BİLGİ EKRAN",
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                  brightnessValue: _screenBrightness3,
-                  onChanged: (value) {
-                    setState(() {
-                      _screenBrightness3 = value;
-                    });
-                  },
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
-                _buildSettingCard(
-                  context,
-                  title: "4. BİLGİ EKRAN",
+                  title: languageProvider.getTranslation('info_screen'),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                   brightnessValue: _screenBrightness4,
@@ -84,6 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       _screenBrightness4 = value;
                     });
                   },
+                  languageProvider: languageProvider,
                 ),
                 SizedBox(height: screenHeight * 0.02),
 
@@ -95,8 +86,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   child: TextButton.icon(
                     icon: const Icon(Icons.language, color: Color(0xFF37474F)),
-                    label: const Text(
-                      'UYGULAMA DİL SEÇENEKLERİ',
+                    label: Text(
+                      languageProvider.getTranslation('language_options'),
                       style: TextStyle(
                         color: Color(0xFF37474F),
                         fontWeight: FontWeight.bold,
@@ -115,7 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ),
-      bottomNavigationBar: const AppFooter(activeTab: "AYARLAR"),
+      bottomNavigationBar: AppFooter(activeTab: languageProvider.getTranslation('settings')),
     );
   }
 
@@ -124,7 +115,8 @@ class _SettingsPageState extends State<SettingsPage> {
         required double screenWidth,
         required double screenHeight,
         required double brightnessValue,
-        required ValueChanged<double> onChanged}) {
+        required ValueChanged<double> onChanged,
+        required LanguageProvider languageProvider}) {
     return Container(
       width: screenWidth * 0.9,
       decoration: BoxDecoration(
@@ -168,8 +160,8 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "EKRAN PARLAKLIĞI",
+                Text(
+                  languageProvider.getTranslation('screen_brightness'),
                   style: TextStyle(
                     fontSize: 12.0,
                     color: Color(0xFF78909C),

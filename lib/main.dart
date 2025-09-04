@@ -18,28 +18,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final languageProvider = Provider.of<LanguageProvider>(context);
-
-    return MaterialApp(
-      title: 'Duyurubu',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      locale: languageProvider.locale,
-      supportedLocales: const [
-        Locale('tr', 'TR'),
-        Locale('en', 'US'),
-        Locale('ru', 'RU'),
-        Locale('ar', 'SA'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const Management(), // Uygulama açılır açılmaz Management sayfası
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return MaterialApp(
+          title: 'Duyurubu',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            primarySwatch: Colors.teal,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          locale: languageProvider.locale,
+          supportedLocales: const [
+            Locale('tr', 'TR'),
+            Locale('en', 'US'),
+            Locale('ru', 'RU'),
+            Locale('ar', 'SA'),
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const Management(),
+        );
+      },
     );
   }
 }

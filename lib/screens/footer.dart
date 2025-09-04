@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'management.dart';
 import 'connect.dart';
 import 'settings.dart';
+import 'package:provider/provider.dart';
+import '../language.dart';
 
 class AppFooter extends StatelessWidget {
   final String activeTab;
@@ -12,6 +14,7 @@ class AppFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -24,13 +27,13 @@ class AppFooter extends StatelessWidget {
               buildNavItem(
                 context,
                 icon: Icons.manage_accounts,
-                label: "YÖNETİM",
-                isActive: activeTab == "YÖNETİM",
+                label: languageProvider.getTranslation('management'),
+                isActive: activeTab == "management",
                 onTap: () {
-                  if (activeTab != "YÖNETİM") {
+                  if (activeTab != "management") {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => Management()),
+                      MaterialPageRoute(builder: (_) => const Management()),
                     );
                   }
                 },
@@ -38,10 +41,10 @@ class AppFooter extends StatelessWidget {
               buildNavItem(
                 context,
                 icon: Icons.link,
-                label: "BAĞLANTI",
-                isActive: activeTab == "BAĞLANTI",
+                label: languageProvider.getTranslation('connection'),
+                isActive: activeTab == "connection",
                 onTap: () {
-                  if (activeTab != "BAĞLANTI") {
+                  if (activeTab != "connection") {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => ConnectPage()),
@@ -52,10 +55,10 @@ class AppFooter extends StatelessWidget {
               buildNavItem(
                 context,
                 icon: Icons.settings,
-                label: "AYARLAR",
-                isActive: activeTab == "AYARLAR",
+                label: languageProvider.getTranslation('settings'),
+                isActive: activeTab == "settings",
                 onTap: () {
-                  if (activeTab != "AYARLAR") {
+                  if (activeTab != "settings") {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => SettingsPage()),

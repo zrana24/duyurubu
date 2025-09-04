@@ -4,26 +4,156 @@ import 'package:provider/provider.dart';
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('tr', 'TR');
-  // Bu çeviriler, çeviri API'si arızalanırsa veya çevrimdışı kullanım için bir yedek görevi görür.
-  final Map<String, Map<String, String>> _translations = {
-    'tr': {'select_button': 'Seç'},
-    'en': {'select_button': 'Select'},
-    'ru': {'select_button': 'Выбрать'},
-    'ar': {'select_button': 'اختر'},
-  };
 
   Locale get locale => _locale;
 
-  void setLocale(Locale newLocale) {
-    if (_locale != newLocale) {
-      _locale = newLocale;
-      notifyListeners();
-    }
+  void setLocale(Locale locale) {
+    _locale = locale;
+    notifyListeners();
   }
 
-  // Senkron kullanım için basit getter
+  final Map<String, Map<String, String>> _localizedStrings = {
+    'tr': {
+      'name_screen': 'İSİMLİK EKRANI',
+      'add_name': 'İSİM EKLE AI',
+      'speaker_info': 'KONUŞMACI BİLGİSİ',
+      'department': 'Bölüm/Pozisyon:',
+      'name': 'Ad Soyad:',
+      'duration': 'Sunum Süresi:',
+      'cancel': 'İPTAL',
+      'save': 'KAYDET',
+      'fill_all_fields': 'Lütfen tüm alanları doldurun!',
+      'invalid_time': 'Lütfen geçerli bir süre formatı girin! (SS:DD:SS)',
+      'added_success': 'Konuşmacı başarıyla eklendi!',
+      'language_options': 'DİL SEÇENEKLERİ',
+      'selected_language': 'dili seçildi',
+      'select_button': 'SEÇ',
+      'paired_podiums': 'EŞLEŞMİŞ KÜRSÜLER',
+      'nearby_devices': 'ÇEVREDEKİ CİHAZLAR',
+      'pairing_connecting': 'Eşleştiriliyor ve bağlanıyor...',
+      'processing': 'İŞLEM YAPILIYOR...',
+      'disconnect': 'BAĞLANTIYI KES',
+      'connect': 'BAĞLAN',
+      'select_device': 'CİHAZ SEÇİN',
+      'no_devices_found': 'Çevrede cihaz bulunamadı',
+      'no_paired_podiums': 'Eşleşmiş kürsü bulunamadı',
+      'management': 'YÖNETİM',
+      'connection': 'BAĞLANTI',
+      'settings': 'AYARLAR',
+      'main_screen': '1. ANA EKRAN',
+      'name_screen1': '2. İSİMLİK EKRAN',
+      'info_screen': '3. BİLGİ EKRAN',
+      'screen_brightness': 'EKRAN PARLAKLIĞI',
+
+    },
+    'en': {
+      'name_screen': 'NAME SCREEN',
+      'add_name': 'ADD NAME AI',
+      'speaker_info': 'SPEAKER INFO',
+      'department': 'Department/Position:',
+      'name': 'Full Name:',
+      'duration': 'Presentation Time:',
+      'cancel': 'CANCEL',
+      'save': 'SAVE',
+      'fill_all_fields': 'Please fill in all fields!',
+      'invalid_time': 'Please enter a valid time format! (HH:MM:SS)',
+      'added_success': 'Speaker added successfully!',
+      'language_options': 'LANGUAGE OPTIONS',
+      'selected_language': 'language selected',
+      'select_button': 'SELECT',
+      'paired_podiums': 'PAIRED PODIUMS',
+      'nearby_devices': 'NEARBY DEVICES',
+      'pairing_connecting': 'Pairing and connecting...',
+      'processing': 'PROCESSING...',
+      'disconnect': 'DISCONNECT',
+      'connect': 'CONNECT',
+      'select_device': 'SELECT DEVICE',
+      'no_devices_found': 'No devices found nearby',
+      'no_paired_podiums': 'No paired podiums found',
+      'management': 'MANAGEMENT',
+      'connection': 'CONNECTION',
+      'settings': 'SETTINGS',
+      'main_screen': '1. MAIN SCREEN',
+      'name_screen1': '2. NAME SCREEN',
+      'info_screen': '3. INFO SCREEN',
+      'screen_brightness': 'SCREEN BRIGHTNESS',
+    },
+    'ru': {
+      'name_screen': 'ЭКРАН ИМЕН',
+      'add_name': 'ДОБАВИТЬ ИМЯ AI',
+      'speaker_info': 'ИНФОРМАЦИЯ О ДОКЛАДЧИКЕ',
+      'department': 'Отдел/Должность:',
+      'name': 'ФИО:',
+      'duration': 'Время выступления:',
+      'cancel': 'ОТМЕНА',
+      'save': 'СОХРАНИТЬ',
+      'fill_all_fields': 'Пожалуйста, заполните все поля!',
+      'invalid_time': 'Введите правильный формат времени! (ЧЧ:ММ:СС)',
+      'added_success': 'Докладчик успешно добавлен!',
+      'language_options': 'ВАРИАНТЫ ЯЗЫКА',
+      'selected_language': 'язык выбран',
+      'select_button': 'ВЫБРАТЬ',
+      'paired_podiums': 'СОПРЯЖЕННЫЕ ПОДИУМЫ',
+      'nearby_devices': 'БЛИЗЛЕЖАЩИЕ УСТРОЙСТВА',
+      'pairing_connecting': 'Сопряжение и подключение...',
+      'processing': 'ОБРАБОТКА...',
+      'disconnect': 'ОТКЛЮЧИТЬ',
+      'connect': 'ПОДКЛЮЧИТЬ',
+      'select_device': 'ВЫБРАТЬ УСТРОЙСТВО',
+      'no_devices_found': 'Устройства поблизости не найдены',
+      'no_paired_podiums': 'Сопряженные подиумы не найдены',
+      'management': 'УПРАВЛЕНИЕ',
+      'connection': 'СВЯЗЬ',
+      'settings': 'НАСТРОЙКИ',
+      'main_screen': '1. ГЛАВНЫЙ ЭКРАН',
+      'name_screen1': '2. ЭКРАН ИМЕН',
+      'info_screen': '3. ИНФОРМАЦИОННЫЙ ЭКРАН',
+      'screen_brightness': 'ЯРКОСТЬ ЭКРАНА',
+    },
+    'ar': {
+      'name_screen': 'شاشة الأسماء',
+      'add_name': 'إضافة اسم AI',
+      'speaker_info': 'معلومات المتحدث',
+      'department': 'القسم/الوظيفة:',
+      'name': 'الاسم الكامل:',
+      'duration': 'مدة العرض:',
+      'cancel': 'إلغاء',
+      'save': 'حفظ',
+      'fill_all_fields': 'يرجى ملء جميع الحقول!',
+      'invalid_time': 'الرجاء إدخال صيغة وقت صحيحة! (س:د:ث)',
+      'added_success': 'تمت إضافة المتحدث بنجاح!',
+      'language_options': 'خيارات اللغة',
+      'selected_language': 'تم اختيار اللغة',
+      'select_button': 'اختيار',
+      'paired_podiums': 'المنصات المقترنة',
+      'nearby_devices': 'الأجهزة القريبة',
+      'pairing_connecting': 'جاري الاقتران والتوصيل...',
+      'processing': 'جاري المعالجة...',
+      'disconnect': 'قطع الاتصال',
+      'connect': 'اتصال',
+      'select_device': 'اختر الجهاز',
+      'no_devices_found': 'لم يتم العثور على أجهزة قريبة',
+      'no_paired_podiums': 'لم يتم العثور على منصات مقترنة',
+      'management': 'الإدارة',
+      'connection': 'اتصال',
+      'settings': 'الإعدادات',
+      'main_screen': '1. الشاشة الرئيسية',
+      'name_screen1': '2. شاشة الأسماء',
+      'info_screen': '3. شاشة المعلومات',
+      'screen_brightness': 'سطوع الشاشة',
+    },
+  };
+
   String getTranslation(String key) {
-    return _translations[_locale.languageCode]?[key] ?? key;
+
+    String translation = _localizedStrings[_locale.languageCode]?[key] ?? key;
+
+    if (translation == key && key.contains('_')) {
+      translation = key.replaceAll('_', ' ');
+      translation = translation[0].toUpperCase() + translation.substring(1);
+    }
+
+    return translation;
   }
 }
 
@@ -52,7 +182,7 @@ class _LanguagePageState extends State<LanguagePage> {
       backgroundColor: const Color(0xFFE8EAF6),
       appBar: AppBar(
         title: Text(
-          "Dil Seçenekleri",
+          languageProvider.getTranslation('language_options'),
           style: TextStyle(
             color: const Color(0xFF37474F),
             fontWeight: FontWeight.bold,
@@ -137,7 +267,7 @@ class _LanguagePageState extends State<LanguagePage> {
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text("${selectedLanguage['name']} seçildi."),
+                    content: Text("${selectedLanguage['name']} ${languageProvider.getTranslation('selected_language')}"),
                     duration: const Duration(seconds: 1),
                   ),
                 );
