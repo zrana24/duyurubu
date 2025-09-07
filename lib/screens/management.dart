@@ -3,6 +3,8 @@ import 'dart:async';
 import 'footer.dart';
 import 'package:provider/provider.dart';
 import '../language.dart';
+import '../image.dart';
+import '../bluetooth_provider.dart';
 
 class Management extends StatefulWidget {
   const Management({Key? key}) : super(key: key);
@@ -54,7 +56,6 @@ class _ManagementState extends State<Management> {
   void _showAddSpeakerDialog(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
 
-    // Form alanlarını temizle
     _departmentController.clear();
     _nameController.clear();
     _timeController.text = '00:30:00';
@@ -64,41 +65,27 @@ class _ManagementState extends State<Management> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             width: MediaQuery.of(context).size.width * 0.9,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFF4DB6AC),
-                width: 2,
-              ),
+              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  languageProvider.getTranslation('department'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(languageProvider.getTranslation('department'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _departmentController,
                   decoration: InputDecoration(
                     hintText: languageProvider.getTranslation('department_example'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
@@ -107,25 +94,14 @@ class _ManagementState extends State<Management> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Ad Soyad
-                Text(
-                  languageProvider.getTranslation('name'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(languageProvider.getTranslation('name'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     hintText: languageProvider.getTranslation('name_example'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
@@ -134,24 +110,14 @@ class _ManagementState extends State<Management> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                Text(
-                  languageProvider.getTranslation('duration'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(languageProvider.getTranslation('duration'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _timeController,
                   decoration: InputDecoration(
                     hintText: languageProvider.getTranslation('duration_example'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF4DB6AC)),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 2),
@@ -160,30 +126,16 @@ class _ManagementState extends State<Management> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey.shade400,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          foregroundColor: Colors.white,
                         ),
-                        child: Text(
-                          languageProvider.getTranslation('cancel'),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: Text(languageProvider.getTranslation('cancel')),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -195,19 +147,9 @@ class _ManagementState extends State<Management> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4DB6AC),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          foregroundColor: Colors.white,
                         ),
-                        child: Text(
-                          languageProvider.getTranslation('save'),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: Text(languageProvider.getTranslation('save')),
                       ),
                     ),
                   ],
@@ -226,34 +168,26 @@ class _ManagementState extends State<Management> {
     if (_departmentController.text.trim().isEmpty ||
         _nameController.text.trim().isEmpty ||
         _timeController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(languageProvider.getTranslation('fill_all_fields')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(languageProvider.getTranslation('fill_all_fields')),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
     String timeText = _timeController.text.trim();
     RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$');
-
     if (!timeRegex.hasMatch(timeText)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(languageProvider.getTranslation('invalid_time')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(languageProvider.getTranslation('invalid_time')),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
     Color defaultColor = const Color(0xFF4CAF50);
     if (speakers.isNotEmpty) {
-      List<Color> colors = [
-        const Color(0xFF4CAF50),
-        const Color(0xFFFF9800),
-      ];
+      List<Color> colors = [const Color(0xFF4CAF50), const Color(0xFFFF9800)];
       defaultColor = colors[speakers.length % colors.length];
     }
 
@@ -266,12 +200,10 @@ class _ManagementState extends State<Management> {
       });
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(languageProvider.getTranslation('added_success')),
-        backgroundColor: Colors.green,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(languageProvider.getTranslation('added_success')),
+      backgroundColor: Colors.green,
+    ));
   }
 
   @override
@@ -279,125 +211,124 @@ class _ManagementState extends State<Management> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context); // BluetoothProvider'ı al
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
       body: Column(
         children: [
+          SizedBox(height: screenHeight * 0.05),
+          Container(
+            height: screenHeight * 0.10,
+            child: ImageWidget(
+              fit: BoxFit.contain,
+              showBluetoothStatus: true,
+              connection: bluetoothProvider.connection, // Bluetooth bağlantısını geç
+              connectedDevice: bluetoothProvider.connectedDevice, // Bağlı cihazı geç
+            ),
+          ),
           Expanded(
-            child: SafeArea(
-              child: Container(
-                margin: EdgeInsets.fromLTRB(
-                  screenWidth * 0.04,
-                  screenHeight * 0.02,
-                  screenWidth * 0.04,
-                  screenHeight * 0.01,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF4DB6AC),
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.015,
-                        horizontal: screenWidth * 0.04,
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.015,
+                      horizontal: screenWidth * 0.04,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4DB6AC),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(15),
+                        topRight: Radius.circular(15),
                       ),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4DB6AC),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(18),
-                          topRight: Radius.circular(18),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: screenWidth * 0.15,
-                                  height: screenWidth * 0.08,
-                                  decoration: BoxDecoration(
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: screenWidth * 0.15,
+                                height: screenWidth * 0.08,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00695C),
+                                  borderRadius: BorderRadius.circular(screenWidth * 0.1),
+                                ),
+                              ),
+                              SizedBox(width: screenWidth * 0.03),
+                              Expanded(
+                                child: Text(
+                                  languageProvider.getTranslation('name_screen'),
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.045,
+                                    fontWeight: FontWeight.w700,
                                     color: const Color(0xFF00695C),
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(screenWidth * 0.1),
-                                      topRight: Radius.circular(screenWidth * 0.1),
-                                      bottomLeft: Radius.circular(screenWidth * 0.2),
-                                      bottomRight: Radius.circular(screenWidth * 0.2),
-                                    ),
                                   ),
                                 ),
-                                SizedBox(width: screenWidth * 0.03),
-                                Expanded(
-                                  child: Text(
-                                    languageProvider.getTranslation('name_screen'),
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.045,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF00695C),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          GestureDetector(
-                            onTap: () => _showAddSpeakerDialog(context),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.03,
-                                vertical: screenHeight * 0.004,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black, width: 1.5),
-                              ),
-                              child: Text(
-                                languageProvider.getTranslation('add_name'),
-                                style: TextStyle(
+                        ),
+                        GestureDetector(
+                          onTap: () => _showAddSpeakerDialog(context),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.005,
+                                vertical: screenHeight * 0.005
+                            ),
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black, width: 1.5)
+                            ),
+                            child: Text(
+                              languageProvider.getTranslation('add_name'),
+                              style: TextStyle(
                                   fontSize: screenWidth * 0.032,
                                   color: const Color(0xFF00695C),
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                  fontWeight: FontWeight.w500
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-
-                    // İçerik
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(screenWidth * 0.04),
-                        child: ListView.builder(
-                          itemCount: speakers.length,
-                          itemBuilder: (context, index) {
-                            final speaker = speakers[index];
-                            return AICard(
-                              title: speaker['title']!,
-                              person: speaker['person']!,
-                              initialTime: speaker['time']!,
-                              backgroundColor: Color(int.parse(speaker['color']!)),
-                              borderColor: Color(int.parse(speaker['color']!)),
-                              number: (index + 1).toString(),
-                            );
-                          },
                         ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                      child: ListView.builder(
+                        padding: EdgeInsets.only(
+                          top: screenHeight * 0.005,
+                          bottom: screenHeight * 0.02,
+                        ),
+                        itemCount: speakers.length,
+                        itemBuilder: (context, index) {
+                          final speaker = speakers[index];
+                          return AICard(
+                            title: speaker['title']!,
+                            person: speaker['person']!,
+                            initialTime: speaker['time']!,
+                            backgroundColor: Color(int.parse(speaker['color']!)),
+                            borderColor: Color(int.parse(speaker['color']!)),
+                            number: (index + 1).toString(),
+                          );
+                        },
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+          SizedBox(height: screenHeight * 0.01),
           AppFooter(activeTab: "management"),
         ],
       ),
@@ -405,6 +336,7 @@ class _ManagementState extends State<Management> {
   }
 }
 
+// AICard class remains the same
 class AICard extends StatefulWidget {
   final String title;
   final String person;

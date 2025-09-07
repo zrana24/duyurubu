@@ -5,6 +5,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'footer.dart';
 import 'package:provider/provider.dart';
 import '../language.dart';
+import '../image.dart';
+import '../bluetooth_provider.dart';
 
 class ConnectPage extends StatefulWidget {
   @override
@@ -15,10 +17,7 @@ class _ConnectPageState extends State<ConnectPage> {
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
   List<BluetoothDiscoveryResult> _discoveryResults = [];
   List<BluetoothDevice> _pairedDevicesList = [];
-  BluetoothConnection? _connection;
-  BluetoothDevice? _connectedDevice;
   BluetoothDevice? _selectedDevice;
-  bool _isConnecting = false;
   bool _isScanning = false;
   StreamSubscription<BluetoothDiscoveryResult>? _streamSubscription;
   Map<String, int?> _rssiValues = {};
@@ -28,6 +27,10 @@ class _ConnectPageState extends State<ConnectPage> {
   Timer? _autoConnectTimer;
   Timer? _continuousScanTimer;
 
+  // Add ScrollControllers for the scrollable lists
+  final ScrollController _pairedScrollController = ScrollController();
+  final ScrollController _nearbyScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -36,18 +39,20 @@ class _ConnectPageState extends State<ConnectPage> {
       _startBackgroundCheck();
       _startRSSIUpdateTimer();
       _startAutoConnectTimer();
-      _startContinuousScanning(); // Sürekli taramayı başlat
+      _startContinuousScanning();
     });
   }
 
   @override
   void dispose() {
     _streamSubscription?.cancel();
-    _connection?.dispose();
     _backgroundCheckTimer?.cancel();
     _rssiUpdateTimer?.cancel();
     _autoConnectTimer?.cancel();
-    _continuousScanTimer?.cancel(); // Sürekli tarama timer'ını durdur
+    _continuousScanTimer?.cancel();
+    // Dispose of the ScrollControllers
+    _pairedScrollController.dispose();
+    _nearbyScrollController.dispose();
     super.dispose();
   }
 
@@ -69,7 +74,7 @@ class _ConnectPageState extends State<ConnectPage> {
     FlutterBluetoothSerial.instance.onStateChanged().listen((state) {
       setState(() => _bluetoothState = state);
       if (state == BluetoothState.STATE_ON) {
-        _startDiscovery(); // Bluetooth açıldığında taramayı başlat
+        _startDiscovery();
       } else {
         _stopDiscovery();
       }
@@ -78,16 +83,13 @@ class _ConnectPageState extends State<ConnectPage> {
 
   void _startContinuousScanning() {
     _continuousScanTimer = Timer.periodic(Duration(seconds: 40), (timer) async {
-      if (_bluetoothState != BluetoothState.STATE_ON || _isConnecting) return;
+      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+      if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
 
-      // 30 saniye tarama başlat
       _startDiscovery();
 
-      // 30 saniye taramadan sonra durdur
       await Future.delayed(Duration(seconds: 30));
       _stopDiscovery();
-
-      // 10 saniye bekle (bu zaten 40 saniyelik timer ile sağlanıyor)
     });
   }
 
@@ -105,7 +107,8 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   void _startDiscovery() {
-    if (_isScanning || _bluetoothState != BluetoothState.STATE_ON) return;
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+    if (_isScanning || _bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
 
     setState(() => _isScanning = true);
     _discoveryResults.clear();
@@ -150,7 +153,8 @@ class _ConnectPageState extends State<ConnectPage> {
 
   void _startBackgroundCheck() {
     _backgroundCheckTimer = Timer.periodic(Duration(seconds: 10), (_) async {
-      if (_bluetoothState != BluetoothState.STATE_ON || _isConnecting) return;
+      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+      if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
 
       // RSSI değerlerini güncelle
       for (var device in _pairedDevicesList) {
@@ -163,11 +167,10 @@ class _ConnectPageState extends State<ConnectPage> {
 
   void _startAutoConnectTimer() {
     _autoConnectTimer = Timer.periodic(Duration(seconds: 15), (_) async {
-      if (_bluetoothState != BluetoothState.STATE_ON || _isConnecting || _connectedDevice != null) return;
+      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+      if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting || bluetoothProvider.connectedDevice != null) return;
 
-      // Eşleşmiş cihazlara otomatik bağlan
       if (_pairedDevicesList.isNotEmpty) {
-        // En yüksek RSSI'ya sahip eşleşmiş cihazı bul
         BluetoothDevice? bestDevice;
         int bestRSSI = -100;
 
@@ -175,7 +178,6 @@ class _ConnectPageState extends State<ConnectPage> {
           int? rssi = _rssiValues[device.address];
           DateTime? lastSeen = _lastSeenTimes[device.address];
 
-          // Son 30 saniye içinde görülmüş ve iyi sinyal gücüne sahip
           if (rssi != null &&
               rssi > -75 &&
               rssi > bestRSSI &&
@@ -196,12 +198,10 @@ class _ConnectPageState extends State<ConnectPage> {
 
   void _startRSSIUpdateTimer() {
     _rssiUpdateTimer = Timer.periodic(Duration(seconds: 5), (_) {
-      // Eski RSSI değerlerini temizle (2 dakikadan eski olanlar)
       final now = DateTime.now();
       _lastSeenTimes.removeWhere((key, value) =>
       now.difference(value).inMinutes > 2);
 
-      // Eski RSSI değerlerini de temizle
       _rssiValues.removeWhere((key, value) =>
       !_lastSeenTimes.containsKey(key));
 
@@ -210,12 +210,13 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   Future<void> _pairAndConnectToDevice(BluetoothDevice device) async {
-    if (_isConnecting) return;
-    setState(() => _isConnecting = true);
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+
+    if (bluetoothProvider.isConnecting) return;
+    bluetoothProvider.setConnecting(true);
     _stopDiscovery();
 
     try {
-      // Eşleşmemişse bond oluştur
       if (!_pairedDevicesList.any((d) => d.address == device.address)) {
         print('Cihaz eşleştiriliyor: ${device.name}');
         bool? bonded = await FlutterBluetoothSerial.instance
@@ -227,8 +228,8 @@ class _ConnectPageState extends State<ConnectPage> {
       }
 
       // Önceki bağlantıyı kapat
-      if (_connection != null) {
-        await _connection!.close();
+      if (bluetoothProvider.connection != null) {
+        await bluetoothProvider.connection!.close();
       }
 
       print('Bağlantı kuruluyor: ${device.name}');
@@ -236,41 +237,32 @@ class _ConnectPageState extends State<ConnectPage> {
           .toAddress(device.address)
           .timeout(Duration(seconds: 15));
 
-      setState(() {
-        _connection = connection;
-        _connectedDevice = device;
-        _selectedDevice = device;
-        _isConnecting = false;
-      });
+      // Bağlantıyı provider'a kaydet
+      bluetoothProvider.setConnection(connection, device);
+      setState(() => _selectedDevice = device);
 
       print('Bağlantı başarılı: ${device.name}');
 
-      // Bağlantı durumu dinleyicileri
       connection.input?.listen(
             (_) {
           // Veri geldiğinde burası çalışır
         },
         onDone: () {
           print('Bağlantı kesildi: ${device.name}');
-          setState(() {
-            _connection = null;
-            _connectedDevice = null;
-          });
+          // Bağlantı kesildiğinde provider'ı güncelle
+          bluetoothProvider.setConnection(null, null);
         },
         onError: (error) {
           print('Bağlantı hatası: $error');
-          setState(() {
-            _connection = null;
-            _connectedDevice = null;
-          });
+          bluetoothProvider.setConnection(null, null);
         },
       );
 
     } catch (e) {
       print('Bağlantı kurulurken hata: $e');
-      setState(() => _isConnecting = false);
+      bluetoothProvider.setConnection(null, null);
     } finally {
-      // Bağlantı denemesi bittikten sonra taramayı yeniden başlat
+      bluetoothProvider.setConnecting(false);
       if (_bluetoothState == BluetoothState.STATE_ON) {
         _startDiscovery();
       }
@@ -278,20 +270,14 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   void _disconnect() async {
-    try {
-      await _connection?.close();
-      setState(() {
-        _connection = null;
-        _connectedDevice = null;
-      });
-      print('Bağlantı manuel olarak kesildi');
-    } catch (e) {
-      print('Bağlantı kesme hatası: $e');
-    } finally {
-      // Bağlantı kesildikten sonra taramayı yeniden başlat
-      if (_bluetoothState == BluetoothState.STATE_ON) {
-        _startDiscovery();
-      }
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+    await bluetoothProvider.disconnect(); // Provider üzerinden bağlantıyı kes
+    setState(() => _selectedDevice = null);
+    print('Bağlantı manuel olarak kesildi');
+
+    // Bağlantı kesildikten sonra taramayı yeniden başlat
+    if (_bluetoothState == BluetoothState.STATE_ON) {
+      _startDiscovery();
     }
   }
 
@@ -345,6 +331,7 @@ class _ConnectPageState extends State<ConnectPage> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context);
 
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
@@ -353,6 +340,16 @@ class _ConnectPageState extends State<ConnectPage> {
           body: SafeArea(
             child: Column(
               children: [
+                Container(
+                  height: screenSize.height * 0.10,
+                  child: ImageWidget(
+                    fit: BoxFit.contain,
+                    showBluetoothStatus: true,
+                    connection: bluetoothProvider.connection,
+                    connectedDevice: bluetoothProvider.connectedDevice,
+                  ),
+                ),
+
                 // Bluetooth durumu göstergesi
                 if (_bluetoothState != BluetoothState.STATE_ON)
                   Container(
@@ -374,29 +371,30 @@ class _ConnectPageState extends State<ConnectPage> {
 
                 Expanded(
                   child: ListView(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     children: [
                       _buildCardSection(
                         languageProvider.getTranslation('paired_podiums'),
                         _pairedDevicesList,
                         false,
                         languageProvider,
+                        _pairedScrollController,
                         maxHeight: screenSize.height * 0.25,
                       ),
-                      SizedBox(height: 16),
+                      SizedBox(height: 13),
                       _buildCardSection(
                         languageProvider.getTranslation('nearby_devices'),
                         _discoveryResults.map((r) => r.device).toList(),
                         true,
                         languageProvider,
+                        _nearbyScrollController,
                         maxHeight: screenSize.height * 0.25,
                       ),
                     ],
                   ),
                 ),
 
-                // Bağlantı durumu
-                if (_isConnecting)
+                if (bluetoothProvider.isConnecting)
                   Container(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     color: Colors.blue.withOpacity(0.1),
@@ -426,31 +424,29 @@ class _ConnectPageState extends State<ConnectPage> {
                       ],
                     ),
                   ),
-
-                // Bağlantı butonu
                 Container(
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _bluetoothState != BluetoothState.STATE_ON ? null : () {
-                      if (_connectedDevice != null) {
+                      if (bluetoothProvider.connectedDevice != null) {
                         _disconnect();
                         setState(() => _selectedDevice = null);
-                      } else if (_selectedDevice != null && !_isConnecting) {
+                      } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
                         _pairAndConnectToDevice(_selectedDevice!);
                       }
                     },
                     icon: Icon(
-                      _connectedDevice != null ? Icons.link_off : Icons.bluetooth,
+                      bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
                       color: Colors.white,
                       size: 22,
                     ),
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        _isConnecting
+                        bluetoothProvider.isConnecting
                             ? languageProvider.getTranslation('processing')
-                            : _connectedDevice != null
+                            : bluetoothProvider.connectedDevice != null
                             ? languageProvider.getTranslation('disconnect')
                             : (_selectedDevice != null)
                             ? languageProvider.getTranslation('connect')
@@ -467,9 +463,9 @@ class _ConnectPageState extends State<ConnectPage> {
                       padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                       backgroundColor: _bluetoothState != BluetoothState.STATE_ON
                           ? Colors.grey
-                          : _isConnecting
+                          : bluetoothProvider.isConnecting
                           ? Colors.grey
-                          : _connectedDevice != null
+                          : bluetoothProvider.connectedDevice != null
                           ? Colors.red
                           : (_selectedDevice != null)
                           ? Color(0xFF546E7A)
@@ -488,17 +484,16 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   Widget _buildCardSection(String title, List<BluetoothDevice> devices, bool isNearby,
-      LanguageProvider languageProvider,
+      LanguageProvider languageProvider, ScrollController scrollController,
       {double maxHeight = 200}) {
     bool isPaired = title == languageProvider.getTranslation('paired_podiums');
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
     IconData titleIcon = isPaired ? Icons.bluetooth_connected : Icons.bluetooth_searching;
 
-    // Sabit boyutlar - her iki header için de aynı
     double iconSize = 20.0;
     double fontSize = 14.0;
-    double headerHeight = 48.0; // Header yüksekliğini sabitledik
+    double headerHeight = 48.0;
 
     return Container(
       width: double.infinity,
@@ -509,10 +504,9 @@ class _ConnectPageState extends State<ConnectPage> {
       ),
       child: Column(
         children: [
-          // Başlık kısmı - sabit yükseklik
           Container(
             width: double.infinity,
-            height: headerHeight, // Sabit yükseklik
+            height: headerHeight,
             padding: EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: headerColor,
@@ -540,7 +534,7 @@ class _ConnectPageState extends State<ConnectPage> {
                             color: headerTextColor,
                             fontSize: fontSize,
                             fontWeight: FontWeight.bold,
-                            height: 1.2, // Satır yüksekliği sabit
+                            height: 1.2,
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
@@ -569,14 +563,12 @@ class _ConnectPageState extends State<ConnectPage> {
                       constraints: BoxConstraints.tightFor(width: 32, height: 32),
                     ),
                   ),
-                // Eşleşmiş cihazlar için boş alan (consistent spacing)
                 if (!isNearby)
                   SizedBox(width: 32, height: 32),
               ],
             ),
           ),
 
-          // Cihaz listesi kısmı
           Container(
             height: maxHeight,
             child: devices.isEmpty
@@ -608,12 +600,15 @@ class _ConnectPageState extends State<ConnectPage> {
             )
                 : Scrollbar(
               thumbVisibility: true,
+              controller: scrollController, // Add the ScrollController here
               child: ListView.builder(
+                controller: scrollController, // And here too
                 physics: BouncingScrollPhysics(),
                 itemCount: devices.length,
                 itemBuilder: (context, index) {
                   BluetoothDevice device = devices[index];
-                  bool isConnected = _connectedDevice?.address == device.address;
+                  final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: true);
+                  bool isConnected = bluetoothProvider.connectedDevice?.address == device.address;
                   bool isSelected = _selectedDevice?.address == device.address;
                   int? rssi = _rssiValues[device.address];
 
@@ -687,7 +682,7 @@ class _ConnectPageState extends State<ConnectPage> {
                   maxLines: 1,
                 ),
                 SizedBox(height: 2),
-                if (device != null && _connectedDevice?.address == device.address)
+                if (device != null && isConnected)
                   Text(
                     'Bağlı',
                     style: TextStyle(
@@ -715,7 +710,6 @@ class _ConnectPageState extends State<ConnectPage> {
               ],
             ),
           ),
-          // RSSI göstergesi - her cihaz için göster
           _buildSignalIndicator(rssi),
           SizedBox(width: 8),
           if (isConnected) Icon(Icons.link, color: Colors.green, size: 18),

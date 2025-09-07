@@ -69,16 +69,6 @@ class AppFooter extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: double.infinity,
-          color: const Color(0xFF263238),
-          child: Center(
-            child: Image.asset(
-              "assets/images/footer.png",
-              fit: BoxFit.fitHeight,
-            ),
-          ),
-        ),
       ],
     );
   }
