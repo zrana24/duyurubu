@@ -4,11 +4,19 @@ import 'connect.dart';
 import 'settings.dart';
 import 'package:provider/provider.dart';
 import '../language.dart';
+import 'info.dart';
 
-class AppFooter extends StatelessWidget {
+class AppFooter extends StatefulWidget {
   final String activeTab;
 
   const AppFooter({Key? key, required this.activeTab}) : super(key: key);
+
+  @override
+  State<AppFooter> createState() => _AppFooterState();
+}
+
+class _AppFooterState extends State<AppFooter> {
+  bool showManagementSubmenu = false;
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +27,91 @@ class AppFooter extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (showManagementSubmenu)
+          Container(
+            height: screenHeight * 0.08,
+            color: const Color(0xFF37474F),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const Management()),
+                      );
+                    },
+                    child: Container(
+                      color: const Color(0xFF37474F),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.badge,
+                              color: Colors.white,
+                              size: screenWidth * 0.05,
+                            ),
+                            SizedBox(height: screenHeight * 0.003),
+                            Text(
+                              languageProvider.getTranslation('name_screen_')
+                              , // Çeviri eklendi
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: screenWidth * 0.025,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: screenHeight * 0.06,
+                  color: const Color(0xFF263238),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const InfoScreen()),
+                      );
+                    },
+                    child: Container(
+                      color: const Color(0xFF37474F),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info,
+                              color: Colors.white,
+                              size: screenWidth * 0.05,
+                            ),
+                            SizedBox(height: screenHeight * 0.003),
+                            Text(
+                              languageProvider.getTranslation('info_screen_'),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: screenWidth * 0.025,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Ana menü
         Container(
           height: screenHeight * 0.11,
           color: const Color(0xFF263238),
@@ -28,23 +121,20 @@ class AppFooter extends StatelessWidget {
                 context,
                 icon: Icons.manage_accounts,
                 label: languageProvider.getTranslation('management'),
-                isActive: activeTab == "management",
+                isActive: widget.activeTab == "management" || showManagementSubmenu,
                 onTap: () {
-                  if (activeTab != "management") {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const Management()),
-                    );
-                  }
+                  setState(() {
+                    showManagementSubmenu = !showManagementSubmenu;
+                  });
                 },
               ),
               buildNavItem(
                 context,
                 icon: Icons.link,
                 label: languageProvider.getTranslation('connection'),
-                isActive: activeTab == "connection",
+                isActive: widget.activeTab == "connection",
                 onTap: () {
-                  if (activeTab != "connection") {
+                  if (widget.activeTab != "connection") {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => ConnectPage()),
@@ -56,9 +146,9 @@ class AppFooter extends StatelessWidget {
                 context,
                 icon: Icons.settings,
                 label: languageProvider.getTranslation('settings'),
-                isActive: activeTab == "settings",
+                isActive: widget.activeTab == "settings",
                 onTap: () {
-                  if (activeTab != "settings") {
+                  if (widget.activeTab != "settings") {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => SettingsPage()),
