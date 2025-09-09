@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import '../language.dart';
 import 'footer.dart';
 import 'package:provider/provider.dart';
+import '../image.dart';
+import '../bluetooth_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -12,7 +14,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   double _screenBrightness1 = 1.0;
   double _screenBrightness2 = 1.0;
-  double _screenBrightness3 = 1.0;
   double _screenBrightness4 = 1.0;
 
   @override
@@ -20,93 +21,105 @@ class _SettingsPageState extends State<SettingsPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8EAF6),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.05,
-              vertical: screenHeight * 0.03,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSettingCard(
-                  context,
-                  title: languageProvider.getTranslation('main_screen'),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                  brightnessValue: _screenBrightness1,
-                  onChanged: (value) {
-                    setState(() {
-                      _screenBrightness1 = value;
-                    });
-                  },
-                  languageProvider: languageProvider,
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
-                _buildSettingCard(
-                  context,
-                  title: languageProvider.getTranslation('name_screen1'),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                  brightnessValue: _screenBrightness2,
-                  onChanged: (value) {
-                    setState(() {
-                      _screenBrightness2 = value;
-                    });
-                  },
-                  languageProvider: languageProvider,
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
-                _buildSettingCard(
-                  context,
-                  title: languageProvider.getTranslation('info_screen'),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                  brightnessValue: _screenBrightness4,
-                  onChanged: (value) {
-                    setState(() {
-                      _screenBrightness4 = value;
-                    });
-                  },
-                  languageProvider: languageProvider,
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
-                Container(
-                  width: screenWidth * 0.9,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB0BEC5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.language, color: Color(0xFF37474F)),
-                    label: Text(
-                      languageProvider.getTranslation('language_options'),
-                      style: TextStyle(
-                        color: Color(0xFF37474F),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LanguagePage()),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        toolbarHeight: screenHeight * 0.10,
+        flexibleSpace: Container(
+          width: double.infinity,
+          height: double.infinity,
+          child: ImageWidget(
+            fit: BoxFit.cover,
+            showBluetoothStatus: true,
+            connection: bluetoothProvider.connection,
+            connectedDevice: bluetoothProvider.connectedDevice,
           ),
         ),
       ),
-      bottomNavigationBar: AppFooter(activeTab: languageProvider.getTranslation('settings')),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.05,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSettingCard(
+                context,
+                title: languageProvider.getTranslation('main_screen'),
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                brightnessValue: _screenBrightness1,
+                onChanged: (value) {
+                  setState(() {
+                    _screenBrightness1 = value;
+                  });
+                },
+                languageProvider: languageProvider,
+              ),
+              SizedBox(height: screenHeight * 0.01),
+
+              _buildSettingCard(
+                context,
+                title: languageProvider.getTranslation('name_screen1'),
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                brightnessValue: _screenBrightness2,
+                onChanged: (value) {
+                  setState(() {
+                    _screenBrightness2 = value;
+                  });
+                },
+                languageProvider: languageProvider,
+              ),
+              SizedBox(height: screenHeight * 0.01),
+
+              _buildSettingCard(
+                context,
+                title: languageProvider.getTranslation('info_screen'),
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                brightnessValue: _screenBrightness4,
+                onChanged: (value) {
+                  setState(() {
+                    _screenBrightness4 = value;
+                  });
+                },
+                languageProvider: languageProvider,
+              ),
+              SizedBox(height: screenHeight * 0.02),
+
+              Container(
+                width: screenWidth * 0.9,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFB0BEC5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.language, color: Color(0xFF37474F)),
+                  label: Text(
+                    languageProvider.getTranslation('language_options'),
+                    style: TextStyle(
+                      color: Color(0xFF37474F),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LanguagePage()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: AppFooter(activeTab: "settings"),
     );
   }
 

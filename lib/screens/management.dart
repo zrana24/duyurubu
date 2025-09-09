@@ -19,25 +19,21 @@ class _ManagementState extends State<Management> {
       "title": "Satış ve Pazarlama Müdürü",
       "person": "Macit AHISKALI",
       "time": "00:30:00",
-      "color": "0xFF4CAF50"
     },
     {
       "title": "YAZILIMBU Birimi",
       "person": "Özkan ŞEN",
       "time": "00:30:00",
-      "color": "0xFFFF9800"
     },
     {
       "title": "Finans Direktörü",
       "person": "Elif YILMAZ",
       "time": "00:20:00",
-      "color" : "0xFF4CAF50"
     },
     {
       "title": "İK Müdürü",
       "person": "Ahmet KAYA",
       "time": "00:25:00",
-      "color" : "0xFFFF9800"
     },
   ];
 
@@ -185,18 +181,11 @@ class _ManagementState extends State<Management> {
       return;
     }
 
-    Color defaultColor = const Color(0xFF4CAF50);
-    if (speakers.isNotEmpty) {
-      List<Color> colors = [const Color(0xFF4CAF50), const Color(0xFFFF9800)];
-      defaultColor = colors[speakers.length % colors.length];
-    }
-
     setState(() {
       speakers.add({
         "title": _departmentController.text.trim(),
         "person": _nameController.text.trim(),
         "time": timeText,
-        "color": '0x${defaultColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}',
       });
     });
 
@@ -206,131 +195,142 @@ class _ManagementState extends State<Management> {
     ));
   }
 
+  Color _getCardColor(int index) {
+    List<Color> colors = [const Color(0xFF4CAF50), const Color(0xFFFF9800)];
+    return colors[index % colors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final languageProvider = Provider.of<LanguageProvider>(context);
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context); // BluetoothProvider'ı al
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
-      body: Column(
-        children: [
-          SizedBox(height: screenHeight * 0.05),
-          Container(
-            height: screenHeight * 0.10,
-            child: ImageWidget(
-              fit: BoxFit.contain,
-              showBluetoothStatus: true,
-              connection: bluetoothProvider.connection, // Bluetooth bağlantısını geç
-              connectedDevice: bluetoothProvider.connectedDevice, // Bağlı cihazı geç
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        toolbarHeight: screenHeight * 0.10,
+        flexibleSpace: Container(
+          width: double.infinity,
+          height: double.infinity,
+          child: ImageWidget(
+            fit: BoxFit.cover,
+            showBluetoothStatus: true,
+            connection: bluetoothProvider.connection,
+            connectedDevice: bluetoothProvider.connectedDevice,
           ),
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.015,
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4DB6AC),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(15),
-                        topRight: Radius.circular(15),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenHeight * 0.015,
+                        horizontal: screenWidth * 0.04,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Row(
-                            children: [
-                              Container(
-                                width: screenWidth * 0.15,
-                                height: screenWidth * 0.08,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00695C),
-                                  borderRadius: BorderRadius.circular(screenWidth * 0.1),
-                                ),
-                              ),
-                              SizedBox(width: screenWidth * 0.03),
-                              Expanded(
-                                child: Text(
-                                  languageProvider.getTranslation('name_screen'),
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.045,
-                                    fontWeight: FontWeight.w700,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF4DB6AC),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(15),
+                          topRight: Radius.circular(15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: screenWidth * 0.15,
+                                  height: screenWidth * 0.08,
+                                  decoration: BoxDecoration(
                                     color: const Color(0xFF00695C),
+                                    borderRadius: BorderRadius.circular(screenWidth * 0.1),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _showAddSpeakerDialog(context),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.005,
-                                vertical: screenHeight * 0.005
-                            ),
-                            decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black, width: 1.5)
-                            ),
-                            child: Text(
-                              languageProvider.getTranslation('add_name'),
-                              style: TextStyle(
-                                  fontSize: screenWidth * 0.032,
-                                  color: const Color(0xFF00695C),
-                                  fontWeight: FontWeight.w500
-                              ),
+                                SizedBox(width: screenWidth * 0.03),
+                                Expanded(
+                                  child: Text(
+                                    languageProvider.getTranslation('name_screen'),
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.045,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF00695C),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-                      child: ListView.builder(
-                        padding: EdgeInsets.only(
-                          top: screenHeight * 0.005,
-                          bottom: screenHeight * 0.02,
-                        ),
-                        itemCount: speakers.length,
-                        itemBuilder: (context, index) {
-                          final speaker = speakers[index];
-                          return AICard(
-                            title: speaker['title']!,
-                            person: speaker['person']!,
-                            initialTime: speaker['time']!,
-                            backgroundColor: Color(int.parse(speaker['color']!)),
-                            borderColor: Color(int.parse(speaker['color']!)),
-                            number: (index + 1).toString(),
-                          );
-                        },
+                          GestureDetector(
+                            onTap: () => _showAddSpeakerDialog(context),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.005,
+                                  vertical: screenHeight * 0.005
+                              ),
+                              decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.black, width: 1.5)
+                              ),
+                              child: Text(
+                                languageProvider.getTranslation('add_name'),
+                                style: TextStyle(
+                                    fontSize: screenWidth * 0.032,
+                                    color: const Color(0xFF00695C),
+                                    fontWeight: FontWeight.w500
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                        child: ListView.builder(
+                          padding: EdgeInsets.only(
+                            top: screenHeight * 0.005,
+                            bottom: screenHeight * 0.02,
+                          ),
+                          itemCount: speakers.length,
+                          itemBuilder: (context, index) {
+                            final speaker = speakers[index];
+                            return AICard(
+                              title: speaker['title']!,
+                              person: speaker['person']!,
+                              initialTime: speaker['time']!,
+                              backgroundColor: _getCardColor(index),
+                              borderColor: _getCardColor(index),
+                              number: (index + 1).toString(),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: screenHeight * 0.01),
-          AppFooter(activeTab: "management"),
-        ],
+            SizedBox(height: screenHeight * 0.01),
+            AppFooter(activeTab: "management"),
+          ],
+        ),
       ),
     );
   }

@@ -27,7 +27,6 @@ class _ConnectPageState extends State<ConnectPage> {
   Timer? _autoConnectTimer;
   Timer? _continuousScanTimer;
 
-  // Add ScrollControllers for the scrollable lists
   final ScrollController _pairedScrollController = ScrollController();
   final ScrollController _nearbyScrollController = ScrollController();
 
@@ -50,7 +49,6 @@ class _ConnectPageState extends State<ConnectPage> {
     _rssiUpdateTimer?.cancel();
     _autoConnectTimer?.cancel();
     _continuousScanTimer?.cancel();
-    // Dispose of the ScrollControllers
     _pairedScrollController.dispose();
     _nearbyScrollController.dispose();
     super.dispose();
@@ -82,14 +80,23 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   void _startContinuousScanning() {
-    _continuousScanTimer = Timer.periodic(Duration(seconds: 40), (timer) async {
+    _continuousScanTimer?.cancel();
+    _continuousScanTimer = Timer.periodic(Duration(seconds: 4), (timer) async {
       final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
       if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
 
       _startDiscovery();
+      Future.delayed(Duration(seconds: 2), _stopDiscovery);
 
-      await Future.delayed(Duration(seconds: 30));
-      _stopDiscovery();
+      if (_pairedDevicesList.isNotEmpty && bluetoothProvider.connectedDevice == null) {
+        for (BluetoothDevice device in _pairedDevicesList) {
+          // timeout ile sırayla bağlan
+          print('Otomatik bağlanılıyor: ${device.name}');
+          await _pairAndConnectToDevice(device);
+
+          if (bluetoothProvider.connectedDevice != null) break;
+        }
+      }
     });
   }
 
@@ -171,26 +178,11 @@ class _ConnectPageState extends State<ConnectPage> {
       if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting || bluetoothProvider.connectedDevice != null) return;
 
       if (_pairedDevicesList.isNotEmpty) {
-        BluetoothDevice? bestDevice;
-        int bestRSSI = -100;
+        for (BluetoothDevice device in _pairedDevicesList) {
+          print('Otomatik bağlantı deneniyor: ${device.name}');
+          await _pairAndConnectToDevice(device);
 
-        for (var device in _pairedDevicesList) {
-          int? rssi = _rssiValues[device.address];
-          DateTime? lastSeen = _lastSeenTimes[device.address];
-
-          if (rssi != null &&
-              rssi > -75 &&
-              rssi > bestRSSI &&
-              lastSeen != null &&
-              DateTime.now().difference(lastSeen).inSeconds < 30) {
-            bestDevice = device;
-            bestRSSI = rssi;
-          }
-        }
-
-        if (bestDevice != null) {
-          print('Otomatik bağlantı deneniyor: ${bestDevice.name} (RSSI: $bestRSSI)');
-          _pairAndConnectToDevice(bestDevice);
+          if (bluetoothProvider.connectedDevice != null) break;
         }
       }
     });
@@ -218,64 +210,46 @@ class _ConnectPageState extends State<ConnectPage> {
 
     try {
       if (!_pairedDevicesList.any((d) => d.address == device.address)) {
-        print('Cihaz eşleştiriliyor: ${device.name}');
         bool? bonded = await FlutterBluetoothSerial.instance
-            .bondDeviceAtAddress(device.address);
-        if (bonded != true) {
-          throw Exception('Eşleştirme başarısız');
-        }
+            .bondDeviceAtAddress(device.address)
+            .timeout(Duration(seconds: 5), onTimeout: () => false);
+        if (bonded != true) throw Exception('Eşleştirme başarısız');
         await _getPairedDevices();
       }
 
-      // Önceki bağlantıyı kapat
       if (bluetoothProvider.connection != null) {
         await bluetoothProvider.connection!.close();
       }
 
-      print('Bağlantı kuruluyor: ${device.name}');
       BluetoothConnection connection = await BluetoothConnection
           .toAddress(device.address)
-          .timeout(Duration(seconds: 15));
+          .timeout(Duration(seconds: 8));
 
-      // Bağlantıyı provider'a kaydet
       bluetoothProvider.setConnection(connection, device);
       setState(() => _selectedDevice = device);
 
-      print('Bağlantı başarılı: ${device.name}');
-
-      connection.input?.listen(
-            (_) {
-          // Veri geldiğinde burası çalışır
-        },
-        onDone: () {
-          print('Bağlantı kesildi: ${device.name}');
-          // Bağlantı kesildiğinde provider'ı güncelle
-          bluetoothProvider.setConnection(null, null);
-        },
-        onError: (error) {
-          print('Bağlantı hatası: $error');
-          bluetoothProvider.setConnection(null, null);
-        },
-      );
-
+      connection.input?.listen((_) {}, onDone: () {
+        bluetoothProvider.setConnection(null, null);
+      }, onError: (_) {
+        bluetoothProvider.setConnection(null, null);
+      });
     } catch (e) {
-      print('Bağlantı kurulurken hata: $e');
+      print('Bağlantı hatası: ${device.name} -> $e');
       bluetoothProvider.setConnection(null, null);
-    } finally {
+    }
+    finally {
       bluetoothProvider.setConnecting(false);
-      if (_bluetoothState == BluetoothState.STATE_ON) {
-        _startDiscovery();
-      }
+      if (_bluetoothState == BluetoothState.STATE_ON) _startDiscovery();
     }
   }
 
+
   void _disconnect() async {
     final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-    await bluetoothProvider.disconnect(); // Provider üzerinden bağlantıyı kes
+    await bluetoothProvider.disconnect();
     setState(() => _selectedDevice = null);
     print('Bağlantı manuel olarak kesildi');
 
-    // Bağlantı kesildikten sonra taramayı yeniden başlat
     if (_bluetoothState == BluetoothState.STATE_ON) {
       _startDiscovery();
     }
@@ -337,41 +311,43 @@ class _ConnectPageState extends State<ConnectPage> {
       builder: (context, languageProvider, child) {
         return Scaffold(
           backgroundColor: Color(0xFFE0E0E0),
-          body: SafeArea(
-            child: Column(
-              children: [
+          body: Column(
+            children: [
+              Container(
+                height: screenSize.height * 0.15,
+                width: double.infinity,
+                margin: EdgeInsets.only(top: 0),
+                child: ImageWidget(
+                  fit: BoxFit.cover,
+                  showBluetoothStatus: true,
+                  connection: bluetoothProvider.connection,
+                  connectedDevice: bluetoothProvider.connectedDevice,
+                ),
+              ),
+
+              if (_bluetoothState != BluetoothState.STATE_ON)
                 Container(
-                  height: screenSize.height * 0.10,
-                  child: ImageWidget(
-                    fit: BoxFit.contain,
-                    showBluetoothStatus: true,
-                    connection: bluetoothProvider.connection,
-                    connectedDevice: bluetoothProvider.connectedDevice,
+                  width: double.infinity,
+                  padding: EdgeInsets.all(8),
+                  color: Colors.red.withOpacity(0.1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bluetooth_disabled, color: Colors.red, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Bluetooth kapalı - Lütfen açın',
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
 
-                // Bluetooth durumu göstergesi
-                if (_bluetoothState != BluetoothState.STATE_ON)
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(8),
-                    color: Colors.red.withOpacity(0.1),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.bluetooth_disabled, color: Colors.red, size: 16),
-                        SizedBox(width: 8),
-                        Text(
-                          'Bluetooth kapalı - Lütfen açın',
-                          style: TextStyle(color: Colors.red, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                Expanded(
+              Expanded(
+                child: SafeArea(
+                  top: false,
                   child: ListView(
-                    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     children: [
                       _buildCardSection(
                         languageProvider.getTranslation('paired_podiums'),
@@ -393,90 +369,98 @@ class _ConnectPageState extends State<ConnectPage> {
                     ],
                   ),
                 ),
+              ),
 
-                if (bluetoothProvider.isConnecting)
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    color: Colors.blue.withOpacity(0.1),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            languageProvider.getTranslation('pairing_connecting'),
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              if (bluetoothProvider.isConnecting)
                 Container(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _bluetoothState != BluetoothState.STATE_ON ? null : () {
-                      if (bluetoothProvider.connectedDevice != null) {
-                        _disconnect();
-                        setState(() => _selectedDevice = null);
-                      } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
-                        _pairAndConnectToDevice(_selectedDevice!);
-                      }
-                    },
-                    icon: Icon(
-                      bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        bluetoothProvider.isConnecting
-                            ? languageProvider.getTranslation('processing')
-                            : bluetoothProvider.connectedDevice != null
-                            ? languageProvider.getTranslation('disconnect')
-                            : (_selectedDevice != null)
-                            ? languageProvider.getTranslation('connect')
-                            : languageProvider.getTranslation('select_device'),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 2),
+                  color: Colors.blue.withOpacity(0.1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                      backgroundColor: _bluetoothState != BluetoothState.STATE_ON
-                          ? Colors.grey
-                          : bluetoothProvider.isConnecting
-                          ? Colors.grey
-                          : bluetoothProvider.connectedDevice != null
-                          ? Colors.red
-                          : (_selectedDevice != null)
-                          ? Color(0xFF546E7A)
-                          : Colors.grey,
-                      foregroundColor: Colors.white,
-                    ),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          languageProvider.getTranslation('pairing_connecting'),
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                AppFooter(activeTab: "connection"),
-              ],
-            ),
+
+              SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    Container(
+                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _bluetoothState != BluetoothState.STATE_ON ? null : () {
+                          if (bluetoothProvider.connectedDevice != null) {
+                            _disconnect();
+                            setState(() => _selectedDevice = null);
+                          } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
+                            _pairAndConnectToDevice(_selectedDevice!);
+                          }
+                        },
+                        icon: Icon(
+                          bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            bluetoothProvider.isConnecting
+                                ? languageProvider.getTranslation('processing')
+                                : bluetoothProvider.connectedDevice != null
+                                ? languageProvider.getTranslation('disconnect')
+                                : (_selectedDevice != null)
+                                ? languageProvider.getTranslation('connect')
+                                : languageProvider.getTranslation('select_device'),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          backgroundColor: _bluetoothState != BluetoothState.STATE_ON
+                              ? Colors.grey
+                              : bluetoothProvider.isConnecting
+                              ? Colors.grey
+                              : bluetoothProvider.connectedDevice != null
+                              ? Colors.red
+                              : (_selectedDevice != null)
+                              ? Color(0xFF546E7A)
+                              : Colors.grey,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    AppFooter(activeTab: "connection"),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -489,11 +473,12 @@ class _ConnectPageState extends State<ConnectPage> {
     bool isPaired = title == languageProvider.getTranslation('paired_podiums');
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
-    IconData titleIcon = isPaired ? Icons.bluetooth_connected : Icons.bluetooth_searching;
+    IconData titleIcon = isPaired ? Icons.bluetooth_connected : Icons
+        .bluetooth_searching;
 
     double iconSize = 20.0;
     double fontSize = 14.0;
-    double headerHeight = 48.0;
+    double headerHeight = 40.0;
 
     return Container(
       width: double.infinity,
@@ -503,6 +488,7 @@ class _ConnectPageState extends State<ConnectPage> {
         color: Colors.white,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: double.infinity,
@@ -521,11 +507,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 Expanded(
                   child: Row(
                     children: [
-                      Container(
-                        width: iconSize,
-                        height: iconSize,
-                        child: Icon(titleIcon, color: headerTextColor, size: iconSize),
-                      ),
+                      Icon(titleIcon, color: headerTextColor, size: iconSize),
                       SizedBox(width: 8),
                       Flexible(
                         child: Text(
@@ -544,40 +526,41 @@ class _ConnectPageState extends State<ConnectPage> {
                   ),
                 ),
                 if (isNearby)
-                  Container(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      onPressed: _isScanning ? null : _startDiscovery,
-                      icon: _isScanning
-                          ? SizedBox(
-                        width: iconSize,
-                        height: iconSize,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(headerTextColor),
-                        ),
-                      )
-                          : Icon(Icons.refresh, color: headerTextColor, size: iconSize),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tightFor(width: 32, height: 32),
-                    ),
-                  ),
-                if (!isNearby)
+                  IconButton(
+                    onPressed: _isScanning ? null : _startDiscovery,
+                    icon: _isScanning
+                        ? SizedBox(
+                      width: iconSize,
+                      height: iconSize,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            headerTextColor),
+                      ),
+                    )
+                        : Icon(
+                        Icons.refresh, color: headerTextColor, size: iconSize),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints.tightFor(width: 32, height: 32),
+                  )
+                else
                   SizedBox(width: 32, height: 32),
               ],
             ),
           ),
 
-          Container(
-            height: maxHeight,
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: maxHeight,
+            ),
             child: devices.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isNearby ? Icons.bluetooth_disabled : Icons.bluetooth_searching,
+                    isNearby ? Icons.bluetooth_disabled : Icons
+                        .bluetooth_searching,
                     size: 36,
                     color: Colors.grey[400],
                   ),
@@ -587,7 +570,8 @@ class _ConnectPageState extends State<ConnectPage> {
                     child: Text(
                       isNearby
                           ? languageProvider.getTranslation('no_devices_found')
-                          : languageProvider.getTranslation('no_paired_podiums'),
+                          : languageProvider.getTranslation(
+                          'no_paired_podiums'),
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 12,
@@ -600,15 +584,19 @@ class _ConnectPageState extends State<ConnectPage> {
             )
                 : Scrollbar(
               thumbVisibility: true,
-              controller: scrollController, // Add the ScrollController here
+              controller: scrollController,
               child: ListView.builder(
-                controller: scrollController, // And here too
+                controller: scrollController,
                 physics: BouncingScrollPhysics(),
+                padding: EdgeInsets.only(top: 4),
+                // boşluğu azalt
                 itemCount: devices.length,
                 itemBuilder: (context, index) {
                   BluetoothDevice device = devices[index];
-                  final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: true);
-                  bool isConnected = bluetoothProvider.connectedDevice?.address == device.address;
+                  final bluetoothProvider = Provider.of<BluetoothProvider>(
+                      context, listen: true);
+                  bool isConnected = bluetoothProvider.connectedDevice
+                      ?.address == device.address;
                   bool isSelected = _selectedDevice?.address == device.address;
                   int? rssi = _rssiValues[device.address];
 
@@ -618,7 +606,8 @@ class _ConnectPageState extends State<ConnectPage> {
                     },
                     child: _buildDeviceItem(
                       name: device.name ?? device.address,
-                      icon: isPaired ? Icons.bluetooth_connected : Icons.bluetooth,
+                      icon: isPaired ? Icons.bluetooth_connected : Icons
+                          .bluetooth,
                       iconColor: isConnected
                           ? Colors.green
                           : (isNearby ? Colors.grey[700]! : Colors.blue),

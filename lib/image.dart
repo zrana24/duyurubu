@@ -5,6 +5,7 @@ import 'language.dart';
 
 class ImageWidget extends StatefulWidget {
   final double? height;
+  final double? width;
   final BoxFit fit;
   final bool showBluetoothStatus;
   final BluetoothConnection? connection;
@@ -13,6 +14,7 @@ class ImageWidget extends StatefulWidget {
   const ImageWidget({
     Key? key,
     this.height,
+    this.width,
     this.fit = BoxFit.cover,
     this.showBluetoothStatus = true,
     this.connection,
@@ -125,7 +127,7 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
       String deviceName = widget.connectedDevice!.name ?? widget.connectedDevice!.address;
 
       return Positioned(
-        top: 30,
+        top: 48,
         right: 10,
         child: Container(
           constraints: BoxConstraints(
@@ -142,7 +144,7 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
                 ),
                 child: Icon(Icons.bluetooth_connected, color: Colors.white, size: fontSize),
               ),
-              SizedBox(width: 6),
+              SizedBox(width: 10),
               Flexible(
                 child: Text(
                   "$deviceName BAĞLI",
@@ -180,24 +182,26 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Container(
-              width: constraints.maxWidth,
-              height: widget.height ?? constraints.maxHeight * 0.15,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      'assets/images/footer.png',
-                      fit: widget.fit,
-                    ),
+        return Container(
+          width: widget.width ?? double.infinity,
+          height: widget.height,
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: double.infinity,
                   ),
-                  _buildBluetoothOverlay(languageProvider, context),
-                ],
+                  child: Image.asset(
+                    'assets/images/footer.png',
+                    fit: BoxFit.fitWidth,
+                    width: double.infinity,
+                  ),
+                ),
               ),
-            );
-          },
+              _buildBluetoothOverlay(languageProvider, context),
+            ],
+          ),
         );
       },
     );

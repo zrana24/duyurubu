@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import '../bluetooth_provider.dart'; // BluetoothProvider'ı import edin
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('tr', 'TR');
@@ -44,7 +45,6 @@ class LanguageProvider extends ChangeNotifier {
       'name_screen1': '2. İSİMLİK EKRAN',
       'info_screen': '3. BİLGİ EKRAN',
       'screen_brightness': 'EKRAN PARLAKLIĞI',
-
     },
     'en': {
       'name_screen': 'NAME SCREEN',
@@ -145,7 +145,6 @@ class LanguageProvider extends ChangeNotifier {
   };
 
   String getTranslation(String key) {
-
     String translation = _localizedStrings[_locale.languageCode]?[key] ?? key;
 
     if (translation == key && key.contains('_')) {
@@ -177,6 +176,7 @@ class _LanguagePageState extends State<LanguagePage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8EAF6),
