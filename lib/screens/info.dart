@@ -453,7 +453,8 @@ class _InfoScreenState extends State<InfoScreen> {
                                 SizedBox(width: screenWidth * 0.03),
                                 Expanded(
                                   child: Text(
-                                    languageProvider.getTranslation('info_screen'),
+                                    languageProvider.getTranslation
+                                      ('info_screen_'),
                                     style: TextStyle(
                                       fontSize: screenWidth * 0.045,
                                       fontWeight: FontWeight.w700,
