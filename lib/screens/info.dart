@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'footer.dart';
@@ -28,14 +29,14 @@ class _InfoScreenState extends State<InfoScreen> {
       "title": "project_evaluation",
       "startTime": "00:30:00",
       "endTime": "01:00:00",
-      "type": "video",
+      "type": "document",
       "file": null,
     },
     {
       "title": "budget_planning",
       "startTime": "01:00:00",
       "endTime": "01:30:00",
-      "type": "photo",
+      "type": "document",
       "file": null,
     },
   ];
@@ -118,11 +119,9 @@ class _InfoScreenState extends State<InfoScreen> {
               ListTile(
                 leading: const Icon(Icons.description),
                 title: Text(languageProvider.getTranslation('select_document')),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(languageProvider.getTranslation('document_selection'))),
-                  );
+                  await _pickDocument();
                 },
               ),
             ],
@@ -130,6 +129,24 @@ class _InfoScreenState extends State<InfoScreen> {
         );
       },
     );
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'],
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _selectedFile = File(result.files.single.path!);
+        });
+      }
+    } catch (e) {
+      print("Dosya seçme hatası: $e");
+    }
   }
 
   void _showAddContentDialog(BuildContext context) {
@@ -342,6 +359,8 @@ class _InfoScreenState extends State<InfoScreen> {
         fileType = "photo";
       } else if (["mp4", "mov", "avi"].contains(ext)) {
         fileType = "video";
+      } else if (["pdf", "doc", "docx", "txt", "ppt", "pptx", "xls", "xlsx"].contains(ext)) {
+        fileType = "document";
       }
     }
 
@@ -549,11 +568,29 @@ class _ContentCardState extends State<ContentCard> {
   }
 
   IconData _getIconForType(String type) {
-    return Icons.description;
+    switch (type) {
+      case "photo":
+        return Icons.photo;
+      case "video":
+        return Icons.videocam;
+      case "document":
+        return Icons.description;
+      default:
+        return Icons.description;
+    }
   }
 
   Color _getColorForType(String type) {
-    return Colors.blue;
+    switch (type) {
+      case "photo":
+        return Colors.amber;
+      case "video":
+        return Colors.red;
+      case "document":
+        return Colors.blue;
+      default:
+        return Colors.blue;
+    }
   }
 
   @override
@@ -605,7 +642,7 @@ class _ContentCardState extends State<ContentCard> {
                     GestureDetector(
                       onTap: _togglePlay,
                       child: Icon(
-                        _isPlaying ? Icons.pause_circle : Icons.play_circle,
+                        _isPlaying ? Icons.pause : Icons.play_arrow,
                         color: Colors.grey[700],
                         size: screenWidth * 0.06,
                       ),
@@ -637,6 +674,18 @@ class _ContentCardState extends State<ContentCard> {
                 ),
               ],
             ),
+            if (widget.file != null) ...[
+              SizedBox(height: screenHeight * 0.005),
+              Text(
+                "Dosya: ${widget.file!.path.split('/').last}",
+                style: TextStyle(
+                  fontSize: screenWidth * 0.03,
+                  color: widget.getGreyColor(600),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
       ),

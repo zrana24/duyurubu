@@ -45,7 +45,7 @@ class LanguageProvider extends ChangeNotifier {
       'name_screen1': '2. İSİMLİK EKRAN',
       'name_screen_': 'İSİMLİK EKRAN',
       'info_screen': '3. BİLGİ EKRAN',
-      'info_screen_': 'BİLGİ SCREEN',
+      'info_screen_': 'BİLGİ EKRAN',
       'screen_brightness': 'EKRAN PARLAKLIĞI',
       'add_content': 'İÇERİK EKLE',
       'meeting_topic': 'Toplantı Konusu',

@@ -54,8 +54,7 @@ class _AppFooterState extends State<AppFooter> {
                             ),
                             SizedBox(height: screenHeight * 0.003),
                             Text(
-                              languageProvider.getTranslation('name_screen_')
-                              , // Çeviri eklendi
+                              languageProvider.getTranslation('name_screen_'),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: screenWidth * 0.025,
@@ -134,6 +133,12 @@ class _AppFooterState extends State<AppFooter> {
                 label: languageProvider.getTranslation('connection'),
                 isActive: widget.activeTab == "connection",
                 onTap: () {
+                  if (showManagementSubmenu) {
+                    setState(() {
+                      showManagementSubmenu = false;
+                    });
+                  }
+
                   if (widget.activeTab != "connection") {
                     Navigator.pushReplacement(
                       context,
@@ -148,6 +153,12 @@ class _AppFooterState extends State<AppFooter> {
                 label: languageProvider.getTranslation('settings'),
                 isActive: widget.activeTab == "settings",
                 onTap: () {
+                  if (showManagementSubmenu) {
+                    setState(() {
+                      showManagementSubmenu = false;
+                    });
+                  }
+
                   if (widget.activeTab != "settings") {
                     Navigator.pushReplacement(
                       context,

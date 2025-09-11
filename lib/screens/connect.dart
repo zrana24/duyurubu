@@ -22,22 +22,19 @@ class _ConnectPageState extends State<ConnectPage> {
   StreamSubscription<BluetoothDiscoveryResult>? _streamSubscription;
   Map<String, int?> _rssiValues = {};
   Map<String, DateTime> _lastSeenTimes = {};
-  Timer? _backgroundCheckTimer;
   Timer? _rssiUpdateTimer;
-  Timer? _autoConnectTimer;
   Timer? _continuousScanTimer;
 
   final ScrollController _pairedScrollController = ScrollController();
   final ScrollController _nearbyScrollController = ScrollController();
 
+  //İzinler
   @override
   void initState() {
     super.initState();
     _requestPermissions().then((_) {
       _initBluetooth();
-      _startBackgroundCheck();
       _startRSSIUpdateTimer();
-      _startAutoConnectTimer();
       _startContinuousScanning();
     });
   }
@@ -45,15 +42,14 @@ class _ConnectPageState extends State<ConnectPage> {
   @override
   void dispose() {
     _streamSubscription?.cancel();
-    _backgroundCheckTimer?.cancel();
     _rssiUpdateTimer?.cancel();
-    _autoConnectTimer?.cancel();
     _continuousScanTimer?.cancel();
     _pairedScrollController.dispose();
     _nearbyScrollController.dispose();
     super.dispose();
   }
 
+  //Android ios izinler,
   Future<void> _requestPermissions() async {
     await [
       Permission.bluetoothScan,
@@ -64,6 +60,7 @@ class _ConnectPageState extends State<ConnectPage> {
     ].request();
   }
 
+  //Bluetooth başlatma
   void _initBluetooth() async {
     _bluetoothState = await FlutterBluetoothSerial.instance.state;
     setState(() {});
@@ -79,6 +76,7 @@ class _ConnectPageState extends State<ConnectPage> {
     });
   }
 
+  //Otomatik bağlantı
   void _startContinuousScanning() {
     _continuousScanTimer?.cancel();
     _continuousScanTimer = Timer.periodic(Duration(seconds: 4), (timer) async {
@@ -90,16 +88,15 @@ class _ConnectPageState extends State<ConnectPage> {
 
       if (_pairedDevicesList.isNotEmpty && bluetoothProvider.connectedDevice == null) {
         for (BluetoothDevice device in _pairedDevicesList) {
-          // timeout ile sırayla bağlan
           print('Otomatik bağlanılıyor: ${device.name}');
           await _pairAndConnectToDevice(device);
-
           if (bluetoothProvider.connectedDevice != null) break;
         }
       }
     });
   }
 
+  //Eşleşmiş Cihazlar
   Future<void> _getPairedDevices() async {
     try {
       _pairedDevicesList = await FlutterBluetoothSerial.instance.getBondedDevices();
@@ -108,11 +105,13 @@ class _ConnectPageState extends State<ConnectPage> {
         _lastSeenTimes.putIfAbsent(device.address, () => DateTime.now().subtract(Duration(minutes: 10)));
       }
       setState(() {});
-    } catch (e) {
+    }
+    catch (e) {
       print('Eşleşmiş cihazlar alınırken hata: $e');
     }
   }
 
+  //Çevredeki cihaz tarama
   void _startDiscovery() {
     final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
     if (_isScanning || _bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
@@ -153,50 +152,18 @@ class _ConnectPageState extends State<ConnectPage> {
     });
   }
 
+  //Tarama Durdur
   void _stopDiscovery() {
     _streamSubscription?.cancel();
     setState(() => _isScanning = false);
   }
 
-  void _startBackgroundCheck() {
-    _backgroundCheckTimer = Timer.periodic(Duration(seconds: 10), (_) async {
-      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-      if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting) return;
-
-      // RSSI değerlerini güncelle
-      for (var device in _pairedDevicesList) {
-        if (_rssiValues.containsKey(device.address)) {
-          setState(() {});
-        }
-      }
-    });
-  }
-
-  void _startAutoConnectTimer() {
-    _autoConnectTimer = Timer.periodic(Duration(seconds: 15), (_) async {
-      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-      if (_bluetoothState != BluetoothState.STATE_ON || bluetoothProvider.isConnecting || bluetoothProvider.connectedDevice != null) return;
-
-      if (_pairedDevicesList.isNotEmpty) {
-        for (BluetoothDevice device in _pairedDevicesList) {
-          print('Otomatik bağlantı deneniyor: ${device.name}');
-          await _pairAndConnectToDevice(device);
-
-          if (bluetoothProvider.connectedDevice != null) break;
-        }
-      }
-    });
-  }
-
+  // RSSI temizle
   void _startRSSIUpdateTimer() {
     _rssiUpdateTimer = Timer.periodic(Duration(seconds: 5), (_) {
       final now = DateTime.now();
-      _lastSeenTimes.removeWhere((key, value) =>
-      now.difference(value).inMinutes > 2);
-
-      _rssiValues.removeWhere((key, value) =>
-      !_lastSeenTimes.containsKey(key));
-
+      _lastSeenTimes.removeWhere((key, value) => now.difference(value).inMinutes > 2);
+      _rssiValues.removeWhere((key, value) => !_lastSeenTimes.containsKey(key));
       if (mounted) setState(() {});
     });
   }
@@ -233,7 +200,8 @@ class _ConnectPageState extends State<ConnectPage> {
       }, onError: (_) {
         bluetoothProvider.setConnection(null, null);
       });
-    } catch (e) {
+    }
+    catch (e) {
       print('Bağlantı hatası: ${device.name} -> $e');
       bluetoothProvider.setConnection(null, null);
     }
@@ -243,13 +211,11 @@ class _ConnectPageState extends State<ConnectPage> {
     }
   }
 
-
   void _disconnect() async {
     final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
     await bluetoothProvider.disconnect();
     setState(() => _selectedDevice = null);
-    print('Bağlantı manuel olarak kesildi');
-
+    print('Bağlantı manuel kesildi');
     if (_bluetoothState == BluetoothState.STATE_ON) {
       _startDiscovery();
     }
@@ -589,7 +555,6 @@ class _ConnectPageState extends State<ConnectPage> {
                 controller: scrollController,
                 physics: BouncingScrollPhysics(),
                 padding: EdgeInsets.only(top: 4),
-                // boşluğu azalt
                 itemCount: devices.length,
                 itemBuilder: (context, index) {
                   BluetoothDevice device = devices[index];
