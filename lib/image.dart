@@ -99,18 +99,12 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
         right: 8,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red, width: 1.5),
-          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.bluetooth_disabled, color: Colors.red, size: fontSize + 4),
               SizedBox(width: 6),
               Text(
-                'Bluetooth Kapalı',
+                '',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: fontSize,

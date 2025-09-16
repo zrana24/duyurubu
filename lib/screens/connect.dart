@@ -292,24 +292,7 @@ class _ConnectPageState extends State<ConnectPage> {
               ),
 
               if (_bluetoothState != BluetoothState.STATE_ON)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(8),
-                  color: Colors.red.withOpacity(0.1),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bluetooth_disabled, color: Colors.red, size: 16),
-                      SizedBox(width: 8),
-                      Text(
-                        'Bluetooth kapalı - Lütfen açın',
-                        style: TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-
-              Expanded(
+                Expanded(
                 child: SafeArea(
                   top: false,
                   child: ListView(
