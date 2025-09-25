@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import 'language.dart';
 
@@ -8,7 +8,6 @@ class ImageWidget extends StatefulWidget {
   final double? width;
   final BoxFit fit;
   final bool showBluetoothStatus;
-  final BluetoothConnection? connection;
   final BluetoothDevice? connectedDevice;
 
   const ImageWidget({
@@ -17,7 +16,6 @@ class ImageWidget extends StatefulWidget {
     this.width,
     this.fit = BoxFit.cover,
     this.showBluetoothStatus = true,
-    this.connection,
     this.connectedDevice,
   }) : super(key: key);
 
@@ -26,7 +24,7 @@ class ImageWidget extends StatefulWidget {
 }
 
 class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin {
-  BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
+  BluetoothAdapterState _bluetoothState = BluetoothAdapterState.unknown;
   late AnimationController _animationController;
   late Animation<double> _pulseAnimation;
 
@@ -72,19 +70,29 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
 
   void _initBluetooth() async {
     try {
-      _bluetoothState = await FlutterBluetoothSerial.instance.state;
-      FlutterBluetoothSerial.instance.onStateChanged().listen((state) {
+      // Flutter Blue Plus için bluetooth state alma
+      _bluetoothState = await FlutterBluePlus.adapterState.first;
+
+      // State değişikliklerini dinle
+      FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
         if (mounted) {
           setState(() {
             _bluetoothState = state;
           });
         }
       });
+
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
       print('Bluetooth initialization error: $e');
+      // Hata durumunda default state set et
+      if (mounted) {
+        setState(() {
+          _bluetoothState = BluetoothAdapterState.unknown;
+        });
+      }
     }
   }
 
@@ -93,7 +101,8 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
 
     double fontSize = MediaQuery.of(context).size.width * 0.03;
 
-    if (_bluetoothState != BluetoothState.STATE_ON) {
+    // Bluetooth kapalı durumu
+    if (_bluetoothState != BluetoothAdapterState.on) {
       return Positioned(
         top: 8,
         right: 8,
@@ -102,6 +111,7 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Icon(Icons.bluetooth_disabled, color: Colors.red, size: fontSize + 4),
               SizedBox(width: 6),
               Text(
                 '',
@@ -117,8 +127,11 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
       );
     }
 
-    if (widget.connectedDevice != null && widget.connection != null) {
-      String deviceName = widget.connectedDevice!.name ?? widget.connectedDevice!.address;
+    // Cihaz bağlı durumu
+    if (widget.connectedDevice != null) {
+      String deviceName = widget.connectedDevice!.platformName.isNotEmpty
+          ? widget.connectedDevice!.platformName
+          : widget.connectedDevice!.remoteId.str;
 
       return Positioned(
         top: 48,
@@ -130,13 +143,25 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.bluetooth_connected, color: Colors.white, size: fontSize),
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.bluetooth_connected,
+                        color: Colors.white,
+                        size: fontSize,
+                      ),
+                    ),
+                  );
+                },
               ),
               SizedBox(width: 10),
               Flexible(
@@ -156,6 +181,7 @@ class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin
         ),
       );
     }
+    // Bluetooth açık ama cihaz bağlı değil
     else {
       return Positioned(
         top: 30,

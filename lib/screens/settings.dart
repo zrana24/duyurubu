@@ -34,7 +34,6 @@ class _SettingsPageState extends State<SettingsPage> {
           child: ImageWidget(
             fit: BoxFit.cover,
             showBluetoothStatus: true,
-            connection: bluetoothProvider.connection,
             connectedDevice: bluetoothProvider.connectedDevice,
           ),
         ),

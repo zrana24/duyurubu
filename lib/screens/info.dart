@@ -404,7 +404,6 @@ class _InfoScreenState extends State<InfoScreen> {
           child: ImageWidget(
             fit: BoxFit.cover,
             showBluetoothStatus: true,
-            connection: bluetoothProvider.connection,
             connectedDevice: bluetoothProvider.connectedDevice,
           ),
         ),

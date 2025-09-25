@@ -218,7 +218,6 @@ class _ManagementState extends State<Management> {
           child: ImageWidget(
             fit: BoxFit.cover,
             showBluetoothStatus: true,
-            connection: bluetoothProvider.connection,
             connectedDevice: bluetoothProvider.connectedDevice,
           ),
         ),
@@ -336,7 +335,6 @@ class _ManagementState extends State<Management> {
   }
 }
 
-// AICard class remains the same
 class AICard extends StatefulWidget {
   final String title;
   final String person;
@@ -459,6 +457,7 @@ class _AICardState extends State<AICard> {
               ),
             ),
             SizedBox(height: screenHeight * 0.010),
+            // Title Row
             Row(
               children: [
                 Icon(Icons.business_center, size: screenWidth * 0.05, color: Colors.grey[700]),
@@ -477,13 +476,6 @@ class _AICardState extends State<AICard> {
                 ),
                 Container(
                   child: Icon(Icons.close, color: Colors.red[400], size: screenWidth * 0.08),
-                ),
-                SizedBox(width: screenWidth * 0.015),
-                Container(
-                  width: screenWidth * 0.10,
-                  height: screenWidth * 0.10,
-                  color: Colors.grey[200],
-                  child: Icon(Icons.add, color: Colors.grey[700], size: screenWidth * 0.08),
                 ),
               ],
             ),
@@ -506,37 +498,30 @@ class _AICardState extends State<AICard> {
                   onTap: _startTimer,
                   child: Container(
                     child: Icon(
-                        _isRunning ? Icons.pause : Icons.play_arrow,
-                        color: Colors.grey[700],
-                        size: screenWidth * 0.09
+                      _isRunning ? Icons.pause : Icons.play_arrow,
+                      color: Colors.grey[700],
+                      size: screenWidth * 0.09,
                     ),
-                  ),
-                ),
-                SizedBox(width: screenWidth * 0.015),
-                GestureDetector(
-                  onTap: _resetTimer,
-                  child: Container(
-                    width: screenWidth * 0.10,
-                    height: screenWidth * 0.10,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.remove, color: Colors.grey[700], size: screenWidth * 0.08),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: screenHeight * 0.012),
+            SizedBox(height: screenHeight * 0.010),
             Row(
               children: [
-                Icon(Icons.access_time, size: screenWidth * 0.045, color: widget.backgroundColor),
-                SizedBox(width: screenWidth * 0.02),
-                Text(
-                  _formatDuration(_duration),
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.04,
-                    color: widget.backgroundColor,
-                    fontWeight: FontWeight.bold,
+                Icon(Icons.access_time, size: screenWidth * 0.05, color: Colors.grey[700]),
+                SizedBox(width: screenWidth * 0.03),
+                Expanded(
+                  child: Text(
+                    _formatDuration(_duration),
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.w700,
+                      color: _duration.inSeconds <= 60 ? Colors.red : Colors.black,
+                    ),
                   ),
                 ),
+                SizedBox(width: screenWidth * 0.08),
               ],
             ),
           ],

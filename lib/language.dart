@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
-import '../bluetooth_provider.dart'; // BluetoothProvider'ı import edin
+import '../bluetooth_provider.dart';
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('tr', 'TR');
