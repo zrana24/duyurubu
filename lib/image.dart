@@ -1,242 +1,233 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import 'language.dart';
+import '../screens/settings.dart';
+import '../screens/connect.dart';
+import '../screens/management.dart';
 
 class ImageWidget extends StatefulWidget {
   final double? height;
   final double? width;
   final BoxFit fit;
-  final bool showBluetoothStatus;
-  final BluetoothDevice? connectedDevice;
+  final String activePage;
 
   const ImageWidget({
     Key? key,
     this.height,
     this.width,
     this.fit = BoxFit.cover,
-    this.showBluetoothStatus = true,
-    this.connectedDevice,
+    this.activePage = "home",
   }) : super(key: key);
 
   @override
   _ImageWidgetState createState() => _ImageWidgetState();
 }
 
-class _ImageWidgetState extends State<ImageWidget> with TickerProviderStateMixin {
-  BluetoothAdapterState _bluetoothState = BluetoothAdapterState.unknown;
-  late AnimationController _animationController;
-  late Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.showBluetoothStatus) {
-      _initBluetooth();
-    }
-
-    _animationController = AnimationController(
-      duration: Duration(seconds: 2),
-      vsync: this,
-    );
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    if (widget.connectedDevice != null) {
-      _animationController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(ImageWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.connectedDevice != null && oldWidget.connectedDevice == null) {
-      _animationController.repeat(reverse: true);
-    } else if (widget.connectedDevice == null && oldWidget.connectedDevice != null) {
-      _animationController.stop();
-    }
-  }
-
-  void _initBluetooth() async {
-    try {
-      // Flutter Blue Plus için bluetooth state alma
-      _bluetoothState = await FlutterBluePlus.adapterState.first;
-
-      // State değişikliklerini dinle
-      FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
-        if (mounted) {
-          setState(() {
-            _bluetoothState = state;
-          });
-        }
-      });
-
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      print('Bluetooth initialization error: $e');
-      // Hata durumunda default state set et
-      if (mounted) {
-        setState(() {
-          _bluetoothState = BluetoothAdapterState.unknown;
-        });
-      }
-    }
-  }
-
-  Widget _buildBluetoothOverlay(LanguageProvider languageProvider, BuildContext context) {
-    if (!widget.showBluetoothStatus) return SizedBox.shrink();
-
-    double fontSize = MediaQuery.of(context).size.width * 0.03;
-
-    // Bluetooth kapalı durumu
-    if (_bluetoothState != BluetoothAdapterState.on) {
-      return Positioned(
-        top: 8,
-        right: 8,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.bluetooth_disabled, color: Colors.red, size: fontSize + 4),
-              SizedBox(width: 6),
-              Text(
-                '',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Cihaz bağlı durumu
-    if (widget.connectedDevice != null) {
-      String deviceName = widget.connectedDevice!.platformName.isNotEmpty
-          ? widget.connectedDevice!.platformName
-          : widget.connectedDevice!.remoteId.str;
-
-      return Positioned(
-        top: 48,
-        right: 10,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.4,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: Container(
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.bluetooth_connected,
-                        color: Colors.white,
-                        size: fontSize,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  "$deviceName BAĞLI",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    // Bluetooth açık ama cihaz bağlı değil
-    else {
-      return Positioned(
-        top: 30,
-        right: 8,
-        child: Text(
-          "",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: fontSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-    }
-  }
-
+class _ImageWidgetState extends State<ImageWidget> {
   @override
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
+        bool isConnectPage = widget.activePage == "connect";
+
         return Container(
           width: widget.width ?? double.infinity,
-          height: widget.height,
-          child: Stack(
-            children: [
-              Center(
-                child: Container(
+          height: widget.height ?? 60,
+          decoration: BoxDecoration(
+            color: Color(0xFF1E2832),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
                   constraints: BoxConstraints(
-                    maxWidth: double.infinity,
+                    maxWidth: 150,
+                    maxHeight: 40,
                   ),
                   child: Image.asset(
-                    'assets/images/footer.png',
-                    fit: BoxFit.fitWidth,
-                    width: double.infinity,
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
-              ),
-              _buildBluetoothOverlay(languageProvider, context),
-            ],
+
+                SizedBox(width: 40),
+
+                Container(
+                  width: 2,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF4DB6AC).withOpacity(0.2),
+                        Color(0xFF4DB6AC),
+                        Color(0xFF4DB6AC).withOpacity(0.2),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: 24),
+
+                _buildNavButton(
+                  context: context,
+                  text: languageProvider.getTranslation('content_management') ?? "İÇERİK YÖNETİMİ",
+                  icon: Icons.content_paste_outlined,
+                  isActive: widget.activePage == "management",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Management()),
+                    );
+                  },
+                ),
+
+                SizedBox(width: 16),
+                _buildNavButton(
+                  context: context,
+                  text: languageProvider.getTranslation('settings') ?? "AYARLAR",
+                  icon: Icons.settings_outlined,
+                  isActive: widget.activePage == "settings",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsPage()),
+                    );
+                  },
+                ),
+
+                Spacer(),
+                _buildIconButton(
+                  context: context,
+                  icon: Icons.graphic_eq,
+                  label: languageProvider.getTranslation('pairing') ?? "EŞLEŞTİRME",
+                  isActive: isConnectPage,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ConnectPage()),
+                    );
+                  },
+                ),
+
+                SizedBox(width: 12),
+                _buildIconButton(
+                  context: context,
+                  icon: Icons.language,
+                  label: languageProvider.getTranslation('language_selection') ?? "DİL SEÇİMİ",
+                  isActive: widget.activePage == "language",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LanguagePage()),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
-}
 
-class ImageWidgetController {
-  static final Map<String, GlobalKey<_ImageWidgetState>> _keys = {};
-
-  static GlobalKey<_ImageWidgetState> getKey(String id) {
-    _keys[id] ??= GlobalKey<_ImageWidgetState>();
-    return _keys[id]!;
+  Widget _buildNavButton({
+    required BuildContext context,
+    required String text,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? Color(0xFF6D8094) : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Text(
+                text,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.8,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  static void dispose(String id) {
-    _keys.remove(id);
+  Widget _buildIconButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? Color(0xFF00D2C8) : Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive ? Color(0xFF00D2C8) : Color(0xFF176D63).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? Colors.white : Color(0xFF176D63),
+                size: 16,
+              ),
+              SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? Colors.white : Color(0xFF176D63),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

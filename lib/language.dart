@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../bluetooth_provider.dart';
+import 'image.dart';
+import '../screens/management.dart';
+import '../screens/settings.dart';
+import '../screens/connect.dart';
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('tr', 'TR');
@@ -16,9 +20,15 @@ class LanguageProvider extends ChangeNotifier {
   final Map<String, Map<String, String>> _localizedStrings = {
     'tr': {
       'name_screen': 'İSİMLİK EKRANI',
+      'language_selection':'DİL SEÇİMİ',
+      'pairing':'EŞLEŞTİRME',
       'add_name': 'İSİM EKLE AI',
       'speaker_info': 'KONUŞMACI BİLGİSİ',
+      'no_speakers': 'KONUŞMACI YOK',
+      'content_management':'İÇERİK YÖNETİMİ',
+      'no_contents': 'İÇERİK YOK',
       'department': 'Bölüm/Pozisyon:',
+      'volume_level': 'SES DÜZEYİ',
       'name': 'Ad Soyad:',
       'duration': 'Sunum Süresi:',
       'cancel': 'İPTAL',
@@ -67,12 +77,21 @@ class LanguageProvider extends ChangeNotifier {
       'select_video': 'Video Seç',
       'select_document': 'Belge Seç',
       'document_selection': 'Belge seçme özelliği eklenecek',
+      'department_example': 'Örn: İnsan Kaynakları Müdürü',
+      'name_example': 'Örn: Ahmet Yılmaz',
+      'duration_example': 'Örn: 00:30:00',
     },
     'en': {
       'name_screen': 'NAME SCREEN',
+      'language_selection': 'LANGUAGE SELECTION',
+      'pairing': 'PAIRING',
       'add_name': 'ADD NAME AI',
       'speaker_info': 'SPEAKER INFO',
+      'no_speakers': 'NO SPEAKERS',
+      'content_management': 'CONTENT MANAGEMENT',
+      'no_contents': 'NO CONTENTS',
       'department': 'Department/Position:',
+      'volume_level': 'VOLUME LEVEL',
       'name': 'Full Name:',
       'duration': 'Presentation Time:',
       'cancel': 'CANCEL',
@@ -121,12 +140,21 @@ class LanguageProvider extends ChangeNotifier {
       'select_video': 'Select Video',
       'select_document': 'Select Document',
       'document_selection': 'Document selection feature will be added',
+      'department_example': 'Ex: Human Resources Manager',
+      'name_example': 'Ex: John Smith',
+      'duration_example': 'Ex: 00:30:00',
     },
     'ru': {
       'name_screen': 'ЭКРАН ИМЕН',
+      'language_selection': 'ВЫБОР ЯЗЫКА',
+      'pairing': 'СОПРЯЖЕНИЕ',
       'add_name': 'ДОБАВИТЬ ИМЯ AI',
       'speaker_info': 'ИНФОРМАЦИЯ О ДОКЛАДЧИКЕ',
+      'no_speakers': 'НЕТ ДОКЛАДЧИКОВ',
+      'content_management': 'УПРАВЛЕНИЕ КОНТЕНТОМ',
+      'no_contents': 'НЕТ СОДЕРЖИМОГО',
       'department': 'Отдел/Должность:',
+      'volume_level': 'УРОВЕНЬ ГРОМКОСТИ',
       'name': 'ФИО:',
       'duration': 'Время выступления:',
       'cancel': 'ОТМЕНА',
@@ -175,12 +203,21 @@ class LanguageProvider extends ChangeNotifier {
       'select_video': 'Выбрать видео',
       'select_document': 'Выбрать документ',
       'document_selection': 'Функция выбора документа будет добавлена',
+      'department_example': 'Напр: Менеджер по персоналу',
+      'name_example': 'Напр: Иван Иванов',
+      'duration_example': 'Напр: 00:30:00',
     },
     'ar': {
       'name_screen': 'شاشة الأسماء',
+      'language_selection': 'اختيار اللغة',
+      'pairing': 'الاقتران',
       'add_name': 'إضافة اسم AI',
       'speaker_info': 'معلومات المتحدث',
+      'no_speakers': 'لا يوجد متحدثون',
+      'content_management': 'إدارة المحتوى',
+      'no_contents': 'لا يوجد محتوى',
       'department': 'القسم/الوظيفة:',
+      'volume_level': 'مستوى الصوت',
       'name': 'الاسم الكامل:',
       'duration': 'مدة العرض:',
       'cancel': 'إلغاء',
@@ -205,7 +242,9 @@ class LanguageProvider extends ChangeNotifier {
       'settings': 'الإعدادات',
       'main_screen': '1. الشاشة الرئيسية',
       'name_screen1': '2. شاشة الأسماء',
+      'name_screen_': 'شاشة الأسماء',
       'info_screen': '3. شاشة المعلومات',
+      'info_screen_': 'شاشة المعلومات',
       'screen_brightness': 'سطوع الشاشة',
       'add_content': 'إضافة محتوى',
       'meeting_topic': 'موضوع الاجتماع',
@@ -227,6 +266,9 @@ class LanguageProvider extends ChangeNotifier {
       'select_video': 'اختر فيديو',
       'select_document': 'اختر مستند',
       'document_selection': 'سيتم إضافة ميزة اختيار المستند',
+      'department_example': 'مثال: مدير الموارد البشرية',
+      'name_example': 'مثال: أحمد محمد',
+      'duration_example': 'مثال: 00:30:00',
     },
   };
 
@@ -257,134 +299,125 @@ class _LanguagePageState extends State<LanguagePage> {
     {'code': 'ar', 'name': 'اللغة العربية', 'flag': '🇸🇦'},
   ];
 
+  void _selectLanguage(BuildContext context, Map<String, String> lang) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    languageProvider.setLocale(Locale(lang['code']!));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("${lang['name']} ${languageProvider.getTranslation('selected_language')}"),
+        duration: const Duration(seconds: 1),
+        backgroundColor: const Color(0xFF4DB6AC),
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final isTablet = screenWidth > 600;
     final languageProvider = Provider.of<LanguageProvider>(context);
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8EAF6),
-      appBar: AppBar(
-        title: Text(
-          languageProvider.getTranslation('language_options'),
-          style: TextStyle(
-            color: const Color(0xFF37474F),
-            fontWeight: FontWeight.bold,
-            fontSize: screenWidth * 0.05,
-          ),
-        ),
-        backgroundColor: const Color(0xFF4DB6AC),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF00695C)),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.05,
-            vertical: screenHeight * 0.03,
-          ),
-          child: Column(
-            children: languages.map((lang) {
-              bool isSelected =
-                  languageProvider.locale.languageCode == lang['code'];
-              return GestureDetector(
-                onTap: () {
-                  languageProvider.setLocale(Locale(lang['code']!));
-                },
-                child: Container(
-                  width: screenWidth * 0.9,
-                  margin: const EdgeInsets.only(bottom: 12.0),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.04,
-                    vertical: 16.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFC5CAE9) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF37474F)
-                          : const Color(0xFFC5CAE9),
-                      width: 2,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        lang['flag']!,
-                        style: TextStyle(fontSize: screenWidth * 0.06),
-                      ),
-                      SizedBox(width: screenWidth * 0.04),
-                      Expanded(
-                        child: Text(
-                          lang['name']!,
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.all(screenWidth * 0.05),
-        decoration: const BoxDecoration(
-          color: Color(0xFFE8EAF6),
-        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            ElevatedButton(
-              onPressed: () {
-                final selectedLanguage = languages.firstWhere(
-                      (lang) => lang['code'] == languageProvider.locale.languageCode,
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("${selectedLanguage['name']} ${languageProvider.getTranslation('selected_language')}"),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6D8094),
+            ImageWidget(activePage: "language"),
+            Expanded(
+              child: Container(
+                width: double.infinity,
                 padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.1,
-                  vertical: screenHeight * 0.02,
+                  horizontal: screenWidth * 0.03,
+                  vertical: screenHeight * 0.01,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                child: ListView.builder(
+                  itemCount: languages.length,
+                  padding: EdgeInsets.all(screenWidth * 0.03),
+                  itemBuilder: (context, index) {
+                    final lang = languages[index];
+                    bool isSelected =
+                        languageProvider.locale.languageCode == lang['code'];
+                    return Container(
+                      margin: EdgeInsets.only(bottom: screenHeight * 0.015),
+                      child: _buildLanguageCard(lang, isSelected, isTablet),
+                    );
+                  },
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.flag_rounded,
-                    color: Colors.white,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageCard(Map<String, String> lang, bool isSelected, bool isTablet) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return GestureDetector(
+      onTap: () => _selectLanguage(context, lang),
+      child: Container(
+        width: double.infinity,
+        height: isTablet ? screenHeight * 0.1 : screenHeight * 0.08,
+        margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFC5CAE9) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF37474F)
+                : const Color(0xFFC5CAE9),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              width: isTablet ? screenWidth * 0.12 : screenWidth * 0.15,
+              padding: EdgeInsets.all(isTablet ? 12 : 8),
+              child: Center(
+                child: Text(
+                  lang['flag']!,
+                  style: TextStyle(
+                    fontSize: isTablet ? 24 : screenWidth * 0.08,
                   ),
-                  SizedBox(width: screenWidth * 0.02),
-                  Text(
-                    languageProvider.getTranslation('select_button'),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: screenWidth * 0.045,
-                      fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            Expanded(
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 12 : 8,
+                  vertical: isTablet ? 12 : 8,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lang['name']!,
+                      style: TextStyle(
+                        fontSize: isTablet ? 18 : screenWidth * 0.04,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF37474F),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

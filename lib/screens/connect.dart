@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../bluetooth_provider.dart';
 import '../language.dart';
 import '../image.dart';
-import 'footer.dart';
 
 class ConnectPage extends StatefulWidget {
   @override
@@ -28,6 +27,7 @@ class _ConnectPageState extends State<ConnectPage> {
   Timer? _rssiUpdateTimer;
   Timer? _continuousScanTimer;
   Timer? _pairedDevicesScanTimer;
+  Timer? _autoConnectTimer;
 
   final ScrollController _pairedScrollController = ScrollController();
   final ScrollController _nearbyScrollController = ScrollController();
@@ -42,6 +42,7 @@ class _ConnectPageState extends State<ConnectPage> {
         _startRSSIUpdateTimer();
         _startContinuousScanning();
         _startPairedDevicesScanning();
+        _startAutoConnect();
         _getBondedDevices();
       } else {
         _showPermissionDialog();
@@ -55,6 +56,7 @@ class _ConnectPageState extends State<ConnectPage> {
     _rssiUpdateTimer?.cancel();
     _continuousScanTimer?.cancel();
     _pairedDevicesScanTimer?.cancel();
+    _autoConnectTimer?.cancel();
     _pairedScrollController.dispose();
     _nearbyScrollController.dispose();
     super.dispose();
@@ -141,32 +143,48 @@ class _ConnectPageState extends State<ConnectPage> {
 
   void _startPairedDevicesScanning() {
     _pairedDevicesScanTimer?.cancel();
-    _pairedDevicesScanTimer = Timer.periodic(Duration(seconds: 5), (_) async {
+    _pairedDevicesScanTimer = Timer.periodic(Duration(seconds: 4), (_) async {
       if (_bluetoothState != blue_plus.BluetoothAdapterState.on) return;
 
       await _getBondedDevices();
       await _getPairedDevices();
-
-      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-
-      if (bluetoothProvider.connectedDevice == null && !bluetoothProvider.isConnecting) {
-        _tryAutoConnectToPairedDevice();
-      }
     });
   }
 
-  void _tryAutoConnectToPairedDevice() async {
+  void _startAutoConnect() {
+    _autoConnectTimer?.cancel();
+    _autoConnectTimer = Timer.periodic(Duration(seconds: 4), (_) async {
+      if (_bluetoothState != blue_plus.BluetoothAdapterState.on) return;
+
+      final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+
+      if (bluetoothProvider.connectedDevice != null || bluetoothProvider.isConnecting) {
+        return;
+      }
+
+      await _tryAutoConnectToPairedDevices();
+    });
+  }
+
+  Future<void> _tryAutoConnectToPairedDevices() async {
     final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+
+    print('📡 Otomatik bağlantı taraması başlatıldı. Eşleşmiş cihaz sayısı: ${_pairedDevicesList.length}');
 
     for (blue_plus.BluetoothDevice device in _pairedDevicesList) {
       try {
-        await device.connect(autoConnect: false, timeout: Duration(seconds: 2));
+        print('🔗 ${_getDeviceDisplayName(device)} cihazına bağlanılmaya çalışılıyor...');
+
+        await device.connect(autoConnect: false, timeout: Duration(seconds: 3));
+
         bluetoothProvider.setConnectedDevice(device);
         setState(() => _selectedDevice = device);
-        print('Otomatik bağlantı başarılı: ${_getDeviceDisplayName(device)}');
+
+        print('✅ Otomatik bağlantı başarılı: ${_getDeviceDisplayName(device)}');
         break;
-      } catch (e) {
-        print('${_getDeviceDisplayName(device)} cihazına otomatik bağlanılamadı: $e');
+      }
+      catch (e) {
+        print('❌ ${_getDeviceDisplayName(device)} cihazına otomatik bağlanılamadı: $e');
         continue;
       }
     }
@@ -254,7 +272,6 @@ class _ConnectPageState extends State<ConnectPage> {
         _rssiValues[result.device.remoteId.str] = result.rssi;
         _lastSeenTimes[result.device.remoteId.str] = DateTime.now();
 
-        // Çevredeki cihaz isimlerini serial framework ile al
         _updateDeviceNameFromSerial(result.device);
       }
       setState(() {});
@@ -266,13 +283,10 @@ class _ConnectPageState extends State<ConnectPage> {
     blue_plus.FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
   }
 
-  // Çevredeki cihaz isimlerini serial framework ile güncelle
   void _updateDeviceNameFromSerial(blue_plus.BluetoothDevice device) async {
     try {
-      // BluetoothSerial framework ile cihaz bilgilerini al
       List<bluetooth_serial.BluetoothDevice> bondedDevices = await bluetooth_serial.FlutterBluetoothSerial.instance.getBondedDevices();
 
-      // Eşleşmiş cihazlar arasında bu cihazı bul
       bluetooth_serial.BluetoothDevice? bondedDevice = bondedDevices.firstWhere(
             (d) => d.address == device.remoteId.str,
         orElse: () => bluetooth_serial.BluetoothDevice(
@@ -283,12 +297,12 @@ class _ConnectPageState extends State<ConnectPage> {
         ),
       );
 
-      // Eğer bonded cihazda isim varsa, önbelleğe kaydet
       if (bondedDevice.name != null && bondedDevice.name!.isNotEmpty) {
         _deviceNamesCache[device.remoteId.str] = bondedDevice.name!;
         if (mounted) setState(() {});
       }
-    } catch (e) {
+    }
+    catch (e) {
       print('Cihaz ismi güncellenirken hata: $e');
     }
   }
@@ -308,11 +322,9 @@ class _ConnectPageState extends State<ConnectPage> {
     });
   }
 
-  // ✅ Cihaz adı alma fonksiyonu - Serial framework ile cihaz isimlerini göster
   String _getDeviceDisplayName(blue_plus.BluetoothDevice device) {
     String deviceId = device.remoteId.str;
 
-    // 1. Önce bonded cihazlar listesinden ismi al (serial framework)
     bluetooth_serial.BluetoothDevice? bondedDevice = _bondedDevicesList.firstWhere(
           (d) => d.address == deviceId,
       orElse: () => bluetooth_serial.BluetoothDevice(
@@ -327,12 +339,10 @@ class _ConnectPageState extends State<ConnectPage> {
       return bondedDevice.name!;
     }
 
-    // 2. Önbellekte kayıtlı isim varsa onu kullan
     if (_deviceNamesCache.containsKey(deviceId)) {
       return _deviceNamesCache[deviceId]!;
     }
 
-    // 3. Scan sonuçlarından ismi al
     blue_plus.ScanResult? scanResult = _scanResults.firstWhere(
           (r) => r.device.remoteId == device.remoteId,
       orElse: () => _createDefaultScanResult(device, null),
@@ -342,12 +352,10 @@ class _ConnectPageState extends State<ConnectPage> {
       return scanResult.advertisementData.advName;
     }
 
-    // 4. Platform ismini kullan
     if (device.platformName.isNotEmpty) {
       return device.platformName;
     }
 
-    // 5. Son çare: MAC adresi
     return device.remoteId.str;
   }
 
@@ -361,7 +369,6 @@ class _ConnectPageState extends State<ConnectPage> {
     try {
       print('${_getDeviceDisplayName(device)} cihazına bağlanılıyor...');
 
-      // RSSI değerine bakmadan doğrudan bağlanmaya çalış
       await device.connect(autoConnect: false, timeout: Duration(seconds: 10));
 
       if (!_isDeviceBonded(device)) {
@@ -525,6 +532,7 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final bluetoothProvider = Provider.of<BluetoothProvider>(context);
+    final bool isTablet = screenSize.width > 600;
 
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
@@ -533,13 +541,9 @@ class _ConnectPageState extends State<ConnectPage> {
           body: Column(
             children: [
               Container(
-                height: screenSize.height * 0.15,
+                height: 60,
                 width: double.infinity,
-                child: ImageWidget(
-                  fit: BoxFit.cover,
-                  showBluetoothStatus: true,
-                  connectedDevice: bluetoothProvider.connectedDevice,
-                ),
+                child: ImageWidget(activePage: "connect"),
               ),
               if (_bluetoothState != blue_plus.BluetoothAdapterState.on)
                 Container(
@@ -559,28 +563,9 @@ class _ConnectPageState extends State<ConnectPage> {
               Expanded(
                 child: SafeArea(
                   top: false,
-                  child: ListView(
-                    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    children: [
-                      _buildCardSection(
-                        languageProvider.getTranslation('paired_podiums'),
-                        _pairedDevicesList,
-                        false,
-                        languageProvider,
-                        _pairedScrollController,
-                        maxHeight: screenSize.height * 0.25,
-                      ),
-                      SizedBox(height: 13),
-                      _buildCardSection(
-                        languageProvider.getTranslation('nearby_devices'),
-                        _scanResults.map((r) => r.device).toList(),
-                        true,
-                        languageProvider,
-                        _nearbyScrollController,
-                        maxHeight: screenSize.height * 0.25,
-                      ),
-                    ],
-                  ),
+                  child: isTablet
+                      ? _buildTabletLayout(languageProvider, screenSize)
+                      : _buildMobileLayout(languageProvider, screenSize),
                 ),
               ),
               if (bluetoothProvider.isConnecting)
@@ -609,45 +594,37 @@ class _ConnectPageState extends State<ConnectPage> {
                     ],
                   ),
                 ),
-              SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    Container(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _bluetoothState != blue_plus.BluetoothAdapterState.on ? null : () {
-                          if (bluetoothProvider.connectedDevice != null) {
-                            _disconnect();
-                          } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
-                            _connectToDevice(_selectedDevice!);
-                          }
-                        },
-                        icon: Icon(bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
-                            color: Colors.white, size: 22),
-                        label: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            bluetoothProvider.isConnecting
-                                ? languageProvider.getTranslation('processing')
-                                : bluetoothProvider.connectedDevice != null
-                                ? languageProvider.getTranslation('disconnect')
-                                : (_selectedDevice != null)
-                                ? languageProvider.getTranslation('connect')
-                                : languageProvider.getTranslation('select_device'),
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                          backgroundColor: _getButtonColor(bluetoothProvider),
-                        ),
-                      ),
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _bluetoothState != blue_plus.BluetoothAdapterState.on ? null : () {
+                    if (bluetoothProvider.connectedDevice != null) {
+                      _disconnect();
+                    } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
+                      _connectToDevice(_selectedDevice!);
+                    }
+                  },
+                  icon: Icon(bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
+                      color: Colors.white, size: 22),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      bluetoothProvider.isConnecting
+                          ? languageProvider.getTranslation('processing')
+                          : bluetoothProvider.connectedDevice != null
+                          ? languageProvider.getTranslation('disconnect')
+                          : (_selectedDevice != null)
+                          ? languageProvider.getTranslation('connect')
+                          : languageProvider.getTranslation('select_device'),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      textAlign: TextAlign.center,
                     ),
-                    AppFooter(activeTab: "connection"),
-                  ],
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    backgroundColor: _getButtonColor(bluetoothProvider),
+                  ),
                 ),
               ),
             ],
@@ -657,17 +634,87 @@ class _ConnectPageState extends State<ConnectPage> {
     );
   }
 
+  Widget _buildTabletLayout(LanguageProvider languageProvider, Size screenSize) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          Expanded(
+            flex: 1,
+            child: _buildCardSection(
+              languageProvider.getTranslation('paired_podiums'),
+              _pairedDevicesList,
+              false,
+              languageProvider,
+              _pairedScrollController,
+              maxHeight: screenSize.height * 0.35,
+              isTablet: true,
+            ),
+          ),
+          SizedBox(height: 16),
+          Expanded(
+            flex: 1,
+            child: _buildCardSection(
+              languageProvider.getTranslation('nearby_devices'),
+              _scanResults.map((r) => r.device).toList(),
+              true,
+              languageProvider,
+              _nearbyScrollController,
+              maxHeight: screenSize.height * 0.35,
+              isTablet: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(LanguageProvider languageProvider, Size screenSize) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          Expanded(
+            flex: 1,
+            child: _buildCardSection(
+              languageProvider.getTranslation('paired_podiums'),
+              _pairedDevicesList,
+              false,
+              languageProvider,
+              _pairedScrollController,
+              maxHeight: screenSize.height * 0.35,
+              isTablet: false,
+            ),
+          ),
+          SizedBox(height: 16),
+          Expanded(
+            flex: 1,
+            child: _buildCardSection(
+              languageProvider.getTranslation('nearby_devices'),
+              _scanResults.map((r) => r.device).toList(),
+              true,
+              languageProvider,
+              _nearbyScrollController,
+              maxHeight: screenSize.height * 0.35,
+              isTablet: false,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getButtonColor(BluetoothProvider bluetoothProvider) {
     if (_bluetoothState != blue_plus.BluetoothAdapterState.on) return Colors.grey;
     if (bluetoothProvider.isConnecting) return Colors.grey;
     if (bluetoothProvider.connectedDevice != null) return Colors.red;
-    if (_selectedDevice != null) return Color(0xFF546E7A);
+    if (_selectedDevice != null) return Color(0xFF00D2C8);
     return Colors.grey;
   }
 
   Widget _buildCardSection(String title, List<blue_plus.BluetoothDevice> devices, bool isNearby,
       LanguageProvider languageProvider, ScrollController scrollController,
-      {double maxHeight = 200}) {
+      {double maxHeight = 200, required bool isTablet}) {
     bool isPaired = title == languageProvider.getTranslation('paired_podiums');
     Color headerColor = const Color(0xFF4DB6AC);
     Color headerTextColor = const Color(0xFF00695C);
@@ -675,6 +722,7 @@ class _ConnectPageState extends State<ConnectPage> {
 
     return Container(
       width: double.infinity,
+      height: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: headerColor, width: 1.5),
@@ -685,7 +733,7 @@ class _ConnectPageState extends State<ConnectPage> {
         children: [
           Container(
             width: double.infinity,
-            height: 40,
+            height: isTablet ? 45 : 40,
             padding: EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: headerColor,
@@ -697,12 +745,16 @@ class _ConnectPageState extends State<ConnectPage> {
                 Expanded(
                   child: Row(
                     children: [
-                      Icon(titleIcon, color: headerTextColor, size: 20),
+                      Icon(titleIcon, color: headerTextColor, size: isTablet ? 22 : 20),
                       SizedBox(width: 8),
                       Flexible(
                         child: Text(
                           title,
-                          style: TextStyle(color: headerTextColor, fontSize: 14, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: headerTextColor,
+                              fontSize: isTablet ? 16 : 14,
+                              fontWeight: FontWeight.bold
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -714,30 +766,42 @@ class _ConnectPageState extends State<ConnectPage> {
                   IconButton(
                     onPressed: _isScanning ? null : _startScan,
                     icon: _isScanning
-                        ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(headerTextColor)))
-                        : Icon(Icons.refresh, color: headerTextColor, size: 20),
+                        ? SizedBox(
+                        width: isTablet ? 24 : 20,
+                        height: isTablet ? 24 : 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(headerTextColor)
+                        ))
+                        : Icon(Icons.refresh, color: headerTextColor, size: isTablet ? 22 : 20),
                     padding: EdgeInsets.zero,
-                    constraints: BoxConstraints.tightFor(width: 32, height: 32),
+                    constraints: BoxConstraints.tightFor(
+                        width: isTablet ? 36 : 32,
+                        height: isTablet ? 36 : 32
+                    ),
                   )
                 else
-                  SizedBox(width: 32, height: 32),
+                  SizedBox(width: isTablet ? 36 : 32, height: isTablet ? 36 : 32),
               ],
             ),
           ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
+          Expanded(
             child: devices.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(isNearby ? Icons.bluetooth_disabled : Icons.bluetooth_searching, size: 36, color: Colors.grey[400]),
+                  Icon(isNearby ? Icons.bluetooth_disabled : Icons.bluetooth_searching,
+                      size: isTablet ? 42 : 36, color: Colors.grey[400]),
                   SizedBox(height: 6),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       isNearby ? languageProvider.getTranslation('no_devices_found') : languageProvider.getTranslation('no_paired_podiums'),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: isTablet ? 14 : 12
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -763,7 +827,7 @@ class _ConnectPageState extends State<ConnectPage> {
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: isTablet ? 10 : 8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
@@ -777,12 +841,17 @@ class _ConnectPageState extends State<ConnectPage> {
                           Expanded(
                             child: Row(
                               children: [
-                                Icon(_getDeviceIcon(device), size: 16, color: Colors.grey[600]),
+                                Icon(_getDeviceIcon(device),
+                                    size: isTablet ? 18 : 16, color: Colors.grey[600]),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _getDeviceDisplayName(device),
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    style: TextStyle(
+                                        fontSize: isTablet ? 16 : 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -791,6 +860,8 @@ class _ConnectPageState extends State<ConnectPage> {
                               ],
                             ),
                           ),
+                          if (isConnected)
+                            Icon(Icons.check_circle, color: Colors.green, size: isTablet ? 18 : 16),
                         ],
                       ),
                     ),
