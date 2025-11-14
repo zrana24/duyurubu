@@ -24,19 +24,23 @@ class _ManagementState extends State<Management> {
     final isTablet = screenWidth > 600;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E0E0),
-      body: Column(
-        children: [
-          Container(
-            height: 60,
-            width: double.infinity,
-            child: ImageWidget(activePage: "management"),
-          ),
-
-          Expanded(
-            child: isTablet ? _buildTabletLayout() : _buildMobileLayout(),
-          ),
-        ],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              height: 60,
+              width: double.infinity,
+              child: ImageWidget(activePage: "management"),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(isTablet ? 16.0 : 12.0),
+                child: isTablet ? _buildTabletLayout() : _buildMobileLayout(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -46,25 +50,11 @@ class _ManagementState extends State<Management> {
       children: [
         Expanded(
           flex: 1,
-          child: Container(
-            margin: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
-            ),
-            child: const SpeakerManagement(),
-          ),
+          child: const SpeakerManagement(),
         ),
         Expanded(
           flex: 1,
-          child: Container(
-            margin: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
-            ),
-            child: const ContentManagement(),
-          ),
+          child: const ContentManagement(),
         ),
       ],
     );
@@ -75,20 +65,27 @@ class _ManagementState extends State<Management> {
       children: [
         Expanded(
           child: Container(
-            margin: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+              color: Colors.white,
+              border: Border.all(
+                color: const Color(0xFF469088),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const SpeakerManagement(),
           ),
         ),
+        SizedBox(width: 16),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+              color: Colors.white,
+              border: Border.all(
+                color: const Color(0xFF469088),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const ContentManagement(),
           ),
@@ -112,6 +109,8 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
       'name': 'Macit AHISKALI',
       'time': '00:30:00',
       'isEditing': false,
+      'isActive': false,
+      'borderColor': const Color(0xFF5E6676),
     }
   ];
 
@@ -139,8 +138,10 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
       _speakers.add({
         'department': 'Bölüm/Departman',
         'name': 'Ad Soyad',
-        'time': '00:30:00',
+        'time': '00:00:00',
         'isEditing': true,
+        'isActive': false,
+        'borderColor': const Color(0xFF5E6676),
       });
     });
   }
@@ -189,6 +190,8 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
         'name': name.trim(),
         'time': time,
         'isEditing': false,
+        'isActive': _speakers[index]['isActive'] ?? false,
+        'borderColor': _speakers[index]['borderColor'] ?? const Color(0xFF5E6676),
       };
     });
   }
@@ -207,114 +210,158 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isTablet = screenWidth > 600;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          height: isTablet ? 59 : 50,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFF4DB6AC),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF00695C), width: 2),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00695C),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'İSİMLİK EKRANI',
-                    style: TextStyle(
-                      fontSize: screenWidth > 600 ? 16 : 12,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00695C),
-                    ),
-                  ),
-                ],
+            color: const Color(0xFFD0F9F9),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(8),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: const Color(0xFF00D0C6),
+                width: 0.3,
               ),
-              GestureDetector(
-                onTap: _addNewSpeaker,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth > 600 ? 16 : 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.black, width: 1),
-                  ),
-                  child: Text(
-                    'İSİM EKLE',
-                    style: TextStyle(
-                      fontSize: screenWidth > 600 ? 12 : 9,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00695C),
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 13 : 10,
+              vertical: isTablet ? 10 : 8,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: isTablet ? 64 : 48,
+                  height: isTablet ? 24 : 18,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/logo2.png',
+                      width: isTablet ? 28 : 32,
+                      height: isTablet ? 18 : 14,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
-              ),
-            ],
+                Text(
+                  'İSİMLİK EKRANI',
+                  style: TextStyle(
+                    fontSize: isTablet ? 20 : 16,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF1D7269),
+                    height: 0.7,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _addNewSpeaker,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 5 : 4,
+                      vertical: isTablet ? 4 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: const Color(0xFF469088),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'İSİM EKLE',
+                          style: TextStyle(
+                            fontSize: isTablet ? 13.5 : 11,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF0D7066),
+                            height: 0.92,
+                          ),
+                        ),
+                        SizedBox(width: isTablet ? 6 : 4),
+                        Container(
+                          width: isTablet ? 16 : 13,
+                          height: isTablet ? 16 : 13,
+                          child: Image.asset(
+                            'assets/images/icerik.png',
+                            color: const Color(0xFF0D7066),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 8),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+              color: const Color(0xFFFCFDFD),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: _speakers.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: screenWidth > 600 ? 48 : 36,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Konuşmacı bulunamadı',
-                      style: TextStyle(
-                        fontSize: screenWidth > 600 ? 14 : 10,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+            child: _speakers.isEmpty
+                ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Konuşmacı bulunamadı',
+                  style: TextStyle(
+                    fontSize: isTablet ? 16 : 14,
+                    color: Colors.grey[600],
+                  ),
                 ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                itemCount: _speakers.length,
-                itemBuilder: (context, index) {
-                  final speaker = _speakers[index];
-                  return EditableSpeakerCard(
-                    department: speaker['department'],
-                    name: speaker['name'],
-                    time: speaker['time'],
-                    backgroundColor: _getCardColor(index),
-                    borderColor: _getCardColor(index),
-                    number: (index + 1).toString(),
-                    isEditing: speaker['isEditing'],
-                    onSave: (department, name, time) => _saveSpeaker(index, department, name, time),
-                    onDelete: () => _deleteSpeaker(index),
-                  );
-                },
+              ),
+            )
+                : SingleChildScrollView(
+              padding: EdgeInsets.only(top: isTablet ? 8 : 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (int index = 0; index < _speakers.length; index++) ...[
+                    EditableSpeakerCard(
+                      speaker: _speakers[index],
+                      index: index,
+                      isTablet: isTablet,
+                      onSave: (department, name, time) => _saveSpeaker(index, department, name, time),
+                      onDelete: () => _deleteSpeaker(index),
+                    ),
+                    if (index < _speakers.length - 1)
+                      Transform.translate(
+                        offset: Offset(0, isTablet ? -12.0 : -10.0),
+                        child: Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 13 : 8,
+                          ),
+                          height: 0,
+                          width: isTablet ? 711.0 : double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: const Color(0xFF00D0C6),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -340,6 +387,7 @@ class _ContentManagementState extends State<ContentManagement> {
       'type': 'document',
       'file': null,
       'isEditing': false,
+      'borderColor': const Color(0xFF5E6676),
     }
   ];
   final ImagePicker _picker = ImagePicker();
@@ -362,11 +410,12 @@ class _ContentManagementState extends State<ContentManagement> {
     setState(() {
       _contents.add({
         'title': 'Toplantı Konusu',
-        'startTime': '00:15:00',
-        'endTime': '00:30:00',
+        'startTime': '00:00:00',
+        'endTime': '00:00:00',
         'type': 'document',
         'file': null,
         'isEditing': true,
+        'borderColor': const Color(0xFF5E6676),
       });
     });
   }
@@ -487,6 +536,7 @@ class _ContentManagementState extends State<ContentManagement> {
         'type': _contents[index]['type'],
         'file': _contents[index]['file'],
         'isEditing': false,
+        'borderColor': _contents[index]['borderColor'] ?? const Color(0xFF5E6676),
       };
     });
   }
@@ -539,155 +589,199 @@ class _ContentManagementState extends State<ContentManagement> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isTablet = screenWidth > 600;
 
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          height: isTablet ? 59 : 50,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFF4DB6AC),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF00695C), width: 2),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00695C),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Bilgi EKRANI',
-                    style: TextStyle(
-                      fontSize: screenWidth > 600 ? 14 : 12,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00695C),
-                    ),
-                  ),
-                ],
+            color: const Color(0xFFD0F9F9),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(8),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: const Color(0xFF00D0C6),
+                width: 0.3,
               ),
-              Row(
-                children: [
-                  if (screenWidth > 400)
-                    GestureDetector(
-                      onTap: _exportToComputer,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth > 600 ? 16 : 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.black, width: 1),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.computer, size: 16, color: Color(0xFF00695C)),
-                            if (screenWidth > 500) const SizedBox(width: 6),
-                            if (screenWidth > 500)
-                              Text(
-                                'Bilgisayara Aktar',
-                                style: TextStyle(
-                                  fontSize: screenWidth > 600 ? 12 : 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF00695C),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 13 : 10,
+              vertical: isTablet ? 10 : 8,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: isTablet ? 64 : 48,
+                  height: isTablet ? 24 : 18,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/logo2.png',
+                      width: isTablet ? 28 : 32,
+                      height: isTablet ? 18 : 14,
+                      fit: BoxFit.contain,
                     ),
-                  const SizedBox(width: 8),
+                  ),
+                ),
+                Text(
+                  'BİLGİ EKRANI',
+                  style: TextStyle(
+                    fontSize: isTablet ? 20 : 16,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF1D7269),
+                    height: 0.7,
+                  ),
+                ),
+                const Spacer(),
+                if (screenWidth > 400)
                   GestureDetector(
-                    onTap: _addNewContent,
+                    onTap: _exportToComputer,
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth > 600 ? 16 : 12,
-                        vertical: 6,
+                        horizontal: isTablet ? 5 : 4,
+                        vertical: isTablet ? 4 : 3,
                       ),
+                      margin: EdgeInsets.only(right: isTablet ? 8 : 6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.black, width: 1),
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: const Color(0xFF469088),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (screenWidth > 400)
+                          if (screenWidth > 500)
                             Text(
-                              'İÇERİK EKLE',
+                              'BİLGİSAYARA AKTAR',
                               style: TextStyle(
-                                fontSize: screenWidth > 600 ? 12 : 9,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF00695C),
+                                fontSize: isTablet ? 13.5 : 11,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF0D7066),
+                                height: 0.92,
                               ),
                             ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.image, size: 16, color: Color(0xFF00695C)),
+                          if (screenWidth > 500) SizedBox(width: isTablet ? 6 : 4),
+                          Icon(
+                            Icons.computer,
+                            size: isTablet ? 16 : 13,
+                            color: const Color(0xFF0D7066),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ],
+                GestureDetector(
+                  onTap: _addNewContent,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 5 : 4,
+                      vertical: isTablet ? 4 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: const Color(0xFF469088),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (screenWidth > 400)
+                          Text(
+                            'İÇERİK EKLE',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13.5 : 11,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF0D7066),
+                              height: 0.92,
+                            ),
+                          ),
+                        if (screenWidth > 400) SizedBox(width: isTablet ? 6 : 4),
+                        Container(
+                          width: isTablet ? 16 : 13,
+                          height: isTablet ? 16 : 13,
+                          child: Image.asset(
+                            'assets/images/icerikbuton.png',
+                            color: const Color(0xFF0D7066),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 8),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+              color: const Color(0xFFFCFDFD),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: _contents.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.description,
-                      size: screenWidth > 600 ? 48 : 36,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'İçerik bulunamadı',
-                      style: TextStyle(
-                        fontSize: screenWidth > 600 ? 14 : 10,
-                        color: const Color(0xFF616161),
-                      ),
-                    ),
-                  ],
+            child: _contents.isEmpty
+                ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'İçerik bulunamadı',
+                  style: TextStyle(
+                    fontSize: isTablet ? 16 : 14,
+                    color: Colors.grey[600],
+                  ),
                 ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                itemCount: _contents.length,
-                itemBuilder: (context, index) {
-                  final content = _contents[index];
-                  return EditableContentCard(
-                    title: content['title'],
-                    startTime: content['startTime'],
-                    endTime: content['endTime'],
-                    type: content['type'],
-                    file: content['file'],
-                    isEditing: content['isEditing'],
-                    onSave: (title, startTime, endTime) => _saveContent(index, title, startTime, endTime),
-                    onFilePick: () => _pickFile(index),
-                    onDelete: () => _deleteContent(index),
-                  );
-                },
+              ),
+            )
+                : SingleChildScrollView(
+              padding: EdgeInsets.only(top: isTablet ? 8 : 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (int index = 0; index < _contents.length; index++) ...[
+                    EditableContentCard(
+                      content: _contents[index],
+                      index: index,
+                      isTablet: isTablet,
+                      onSave: (title, startTime, endTime) => _saveContent(index, title, startTime, endTime),
+                      onDelete: () => _deleteContent(index),
+                      onFilePick: () => _pickFile(index),
+                    ),
+                    if (index < _contents.length - 1)
+                      Transform.translate(
+                        offset: Offset(0, isTablet ? -12.0 : -10.0),
+                        child: Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 13 : 8,
+                          ),
+                          height: 0,
+                          width: isTablet ? 711.0 : double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: const Color(0xFF00D0C6),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -698,25 +792,17 @@ class _ContentManagementState extends State<ContentManagement> {
 }
 
 class EditableSpeakerCard extends StatefulWidget {
-  final String department;
-  final String name;
-  final String time;
-  final Color backgroundColor;
-  final Color borderColor;
-  final String number;
-  final bool isEditing;
+  final Map<String, dynamic> speaker;
+  final int index;
+  final bool isTablet;
   final Function(String, String, String) onSave;
   final VoidCallback onDelete;
 
   const EditableSpeakerCard({
     Key? key,
-    required this.department,
-    required this.name,
-    required this.time,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.number,
-    required this.isEditing,
+    required this.speaker,
+    required this.index,
+    required this.isTablet,
     required this.onSave,
     required this.onDelete,
   }) : super(key: key);
@@ -735,9 +821,10 @@ class _EditableSpeakerCardState extends State<EditableSpeakerCard> {
   @override
   void initState() {
     super.initState();
-    _departmentController = TextEditingController(text: widget.department);
-    _nameController = TextEditingController(text: widget.name);
-    _timeController = TextEditingController(text: widget.time);
+    _departmentController = TextEditingController(text: widget.speaker['department'] as String);
+    _nameController = TextEditingController(text: widget.speaker['name'] as String);
+    _timeController = TextEditingController(text: widget.speaker['time'] as String);
+    _isSwitchActive = widget.speaker['isActive'] as bool? ?? false;
   }
 
   @override
@@ -751,6 +838,12 @@ class _EditableSpeakerCardState extends State<EditableSpeakerCard> {
   void _saveSpeaker() {
     widget.onSave(_departmentController.text, _nameController.text, _timeController.text);
   }
+
+  Color _getBorderColor() {
+    return widget.speaker['borderColor'] as Color? ?? const Color(0xFF5E6676);
+  }
+
+  bool get _isEditing => widget.speaker['isEditing'] as bool? ?? false;
 
   void _togglePlay() {
     setState(() {
@@ -774,383 +867,417 @@ class _EditableSpeakerCardState extends State<EditableSpeakerCard> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
-    final isSmallScreen = screenWidth < 400;
-
-    final buttonSize = isTablet ? 50.0 : (isSmallScreen ? 40.0 : 45.0);
-    final iconSize = isTablet ? 22.0 : (isSmallScreen ? 16.0 : 20.0);
-    final spacing = isTablet ? 4.0 : (isSmallScreen ? 2.0 : 3.0);
+    final cardHeight = widget.isTablet ? 143.0 : 133.0;
+    final borderColor = _getBorderColor();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      height: isTablet ? 140 : (isSmallScreen ? 120 : 130),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: widget.borderColor, width: 2),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        margin: EdgeInsets.only(
+          left: widget.isTablet ? 13 : 8,
+          right: widget.isTablet ? 13 : 8,
+          top: widget.isTablet ? (widget.index == 0 ? 20 : 0) : (widget.index == 0 ? 15 : 0),
+          bottom: widget.isTablet ? 24 : 20,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Expanded(
-              flex: 3,
-              child: Column(
+            Container(
+              width: double.infinity,
+              height: cardHeight,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: borderColor,
+                  width: 0.3,
+                ),
+              ),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Row(
-                      children: [
-                        Icon(
-                            Icons.info,
-                            size: iconSize,
-                            color: Colors.black
-                        ),
-                        SizedBox(width: spacing),
-                        Flexible(
-                          child: Text(
-                            '${widget.number}. KONUŞMACI',
-                            style: TextStyle(
-                              fontSize: isTablet ? 14 : (isSmallScreen ? 10 : 12),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                  Expanded(
+                    flex: 3,
+                    child: _buildLeftSection(borderColor),
                   ),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: widget.isEditing
-                        ? Row(
-                      children: [
-                        Icon(
-                            Icons.business,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: TextField(
-                            controller: _departmentController,
-                            decoration: const InputDecoration(
-                              hintText: 'Bölüm/Departman',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 4),
-                              isDense: true,
-                            ),
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Row(
-                      children: [
-                        Icon(
-                            Icons.business,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Flexible(
-                          child: Text(
-                            widget.department,
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: widget.isEditing
-                        ? Row(
-                      children: [
-                        Icon(
-                            Icons.person,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: TextField(
-                            controller: _nameController,
-                            decoration: const InputDecoration(
-                              hintText: 'Ad Soyad',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 4),
-                              isDense: true,
-                            ),
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Row(
-                      children: [
-                        Icon(
-                            Icons.person,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Flexible(
-                          child: Text(
-                            widget.name,
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: widget.isEditing
-                        ? Row(
-                      children: [
-                        Icon(
-                            Icons.access_time,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: TextField(
-                            controller: _timeController,
-                            decoration: const InputDecoration(
-                              hintText: '00:30:00',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 4),
-                              isDense: true,
-                            ),
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Row(
-                      children: [
-                        Icon(
-                            Icons.access_time,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Flexible(
-                          child: Text(
-                            widget.time,
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 14),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  if (widget.isTablet)
+                    _buildRightSection(borderColor)
+                  else
+                    const SizedBox.shrink(),
                 ],
               ),
             ),
+            Positioned(
+              left: widget.isTablet ? 28.0 : 20.0,
+              top: -8.0,
+              child: _buildSpeakerBadgeWithBorder(widget.index + 1, borderColor),
+            ),
+          ],
+        )
+    );
+  }
 
-            SizedBox(width: spacing),
-            Expanded(
-              flex: 2,
-              child: Container(
-                height: double.infinity,
-                child: widget.isEditing
-                    ? Center(
-                  child: Container(
-                    width: buttonSize * 0.9,
-                    height: buttonSize * 0.9,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey, width: 2),
+  Widget _buildLeftSection(Color borderColor) {
+    return SizedBox(
+      width: widget.isTablet ? 520.0 : double.infinity,
+      height: widget.isTablet ? 143.0 : 133.0,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: widget.isTablet ? 24.0 : 14.0,
+          right: widget.isTablet ? 24.0 : 14.0,
+          top: widget.isTablet ? 18.0 : 16.0,
+          bottom: widget.isTablet ? 14.0 : 12.0,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildImageIcon('assets/images/icerik.png', widget.isTablet ? 18 : 16, widget.isTablet ? 16 : 14),
+                SizedBox(width: widget.isTablet ? 8.0 : 6.0),
+                Expanded(
+                  child: _isEditing
+                      ? TextField(
+                    controller: _departmentController,
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 17.0 : 15,
+                      fontWeight: FontWeight.w400,
+                      color: borderColor == const Color(0xFF5E6676)
+                          ? const Color(0xFF414A5D)
+                          : const Color(0xFFA24D00),
+                      height: 0.94,
                     ),
-                    child: IconButton(
-                      onPressed: _saveSpeaker,
-                      icon: Icon(
-                        Icons.check,
-                        size: iconSize * 0.9,
-                        color: Colors.green,
-                      ),
-                      padding: EdgeInsets.zero,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
                     ),
+                  )
+                      : Text(
+                    widget.speaker['department'] as String,
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 17.0 : 15,
+                      fontWeight: FontWeight.w400,
+                      color: borderColor == const Color(0xFF5E6676)
+                          ? const Color(0xFF414A5D)
+                          : const Color(0xFFA24D00),
+                      height: 0.94,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-                    : Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        SizedBox(width: buttonSize * 0.9),
-                        Container(
-                          width: buttonSize * 0.9,
-                          height: buttonSize * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey, width: 2),
-                          ),
-                          child: IconButton(
-                            onPressed: _increaseTime,
-                            icon: Icon(
-                              Icons.add,
-                              size: iconSize * 0.9,
-                              color: Colors.black,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                        Container(
-                          width: buttonSize * 0.9,
-                          height: buttonSize * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey, width: 2),
-                          ),
-                          child: IconButton(
-                            onPressed: widget.onDelete,
-                            icon: Icon(
-                              Icons.close,
-                              size: iconSize * 0.9,
-                              color: Colors.red,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          width: buttonSize * 0.9,
-                          height: buttonSize * 0.9,
-                          child: Center(
-                            child: Transform.scale(
-                              scale: 0.7,
-                              child: Switch(
-                                value: _isSwitchActive,
-                                onChanged: (bool value) {
-                                  setState(() {
-                                    _isSwitchActive = value;
-                                  });
-                                },
-                                activeColor: Color(0xFF4CAF50),
-                                activeTrackColor: Color(0xFFA5D6A7),
-                                inactiveThumbColor: Color(0xFF9E9E9E),
-                                inactiveTrackColor: Color(0xFFE0E0E0),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: buttonSize * 0.9,
-                          height: buttonSize * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey, width: 2),
-                          ),
-                          child: IconButton(
-                            onPressed: _decreaseTime,
-                            icon: Icon(
-                              Icons.remove,
-                              size: iconSize * 0.9,
-                              color: Colors.black,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                        Container(
-                          width: buttonSize * 0.9,
-                          height: buttonSize * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey, width: 2),
-                          ),
-                          child: IconButton(
-                            onPressed: _togglePlay,
-                            icon: Icon(
-                              _isPlaying ? Icons.pause : Icons.play_arrow,
-                              size: iconSize * 0.9,
-                              color: const Color(0xFF616161),
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ),
-              ),
+              ],
+            ),
+            Row(
+              children: [
+                _buildImageIcon('assets/images/konusmaci.png', widget
+                    .isTablet ?
+                18 : 16, widget.isTablet ? 20 : 18),
+                SizedBox(width: widget.isTablet ? 8.0 : 6.0),
+                Expanded(
+                  child: _isEditing
+                      ? TextField(
+                    controller: _nameController,
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 17.0 : 15,
+                      fontWeight: FontWeight.w400,
+                      color: borderColor == const Color(0xFF5E6676)
+                          ? const Color(0xFF414A5D)
+                          : const Color(0xFFA24D00),
+                      height: 0.94,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  )
+                      : Text(
+                    widget.speaker['name'] as String,
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 17.0 : 15,
+                      fontWeight: FontWeight.w400,
+                      color: borderColor == const Color(0xFF5E6676)
+                          ? const Color(0xFF414A5D)
+                          : const Color(0xFFA24D00),
+                      height: 0.94,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                _buildImageIcon('assets/images/saat.png', widget.isTablet ? 18 : 16, widget.isTablet ? 20 : 18),
+                SizedBox(width: widget.isTablet ? 8.0 : 6.0),
+                _buildDigitalTime(
+                  widget.speaker['time'] as String,
+                  borderColor == const Color(0xFF5E6676)
+                      ? const Color(0xFF3B4458)
+                      : const Color(0xFFA24D00),
+                  widget.isTablet,
+                  _isEditing,
+                  _isEditing ? _timeController : null,
+                ),
+                if (!_isEditing) ...[
+                  const Spacer(),
+                  _buildToggleSwitch(),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildDigitalTime(String time, Color textColor, bool isTablet, bool isEditing, [TextEditingController? controller]) {
+    if (isEditing && controller != null) {
+      return SizedBox(
+        width: isTablet ? 120.0 : 110.0,
+        child: TextField(
+          controller: controller,
+          style: TextStyle(
+            fontSize: isTablet ? 16.0 : 14,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'monospace',
+            color: textColor,
+            height: 0.70,
+            letterSpacing: 2.5,
+          ),
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < time.length; i++)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: time[i] == ':' ? 2.0 : 1.0),
+            child: Text(
+              time[i],
+              style: TextStyle(
+                fontSize: isTablet ? 16.0 : 14,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'monospace',
+                color: textColor,
+                height: 0.70,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildImageIcon(String imagePath, double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Image.asset(
+        imagePath,
+        width: width * 0.7,
+        height: height * 0.7,
+        color: const Color(0xFF3C465A),
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildToggleSwitch() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isSwitchActive = !_isSwitchActive;
+        });
+      },
+      child: Container(
+        width: widget.isTablet ? 30 : 26,
+        height: widget.isTablet ? 14 : 12,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: _isSwitchActive ? const Color(0xFF196E64) : Colors.grey[300],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Align(
+          alignment: _isSwitchActive ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: widget.isTablet ? 10 : 8,
+            height: widget.isTablet ? 10 : 8,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpeakerBadgeWithBorder(int number, Color borderColor) {
+    final fontSize = widget.isTablet ? 12.0 : 10.0;
+    final verticalPadding = widget.isTablet ? 3.0 : 2.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isTablet ? 10 : 8,
+        vertical: verticalPadding,
+      ),
+      child: Text(
+        '$number. KONUŞMACI BİLGİSİ',
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF1D1D1D),
+          height: 1.037037037037037,
+          backgroundColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRightSection(Color borderColor) {
+    return Container(
+      width: widget.isTablet ? 120 : 0,
+      height: widget.isTablet ? 143 : 0,
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isTablet ? 4 : 0,
+        vertical: widget.isTablet ? 10 : 0,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: widget.isTablet ? 48 : 0,
+                height: widget.isTablet ? 57 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFEFF9),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add,
+                    size: widget.isTablet ? 18 : 16,
+                    color: const Color(0xFF1D1D1D),
+                  ),
+                ),
+              ),
+              Container(
+                width: widget.isTablet ? 48 : 0,
+                height: widget.isTablet ? 56 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFEFF9),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(10),
+                    bottomRight: Radius.circular(10),
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.remove,
+                    size: widget.isTablet ? 18 : 16,
+                    color: const Color(0xFF1D1D1D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(width: widget.isTablet ? 6 : 0),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: widget.onDelete,
+                child: Container(
+                  width: widget.isTablet ? 48 : 0,
+                  height: widget.isTablet ? 57 : 0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE5E5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF52596C),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.close,
+                      size: widget.isTablet ? 18 : 16,
+                      color: Colors.red[900],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: widget.isTablet ? 2 : 0),
+              GestureDetector(
+                onTap: _togglePlay,
+                child: Container(
+                  width: widget.isTablet ? 48 : 0,
+                  height: widget.isTablet ? 56 : 0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F4F4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF52596C),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: widget.isTablet ? 18 : 16,
+                      color: const Color(0xFF1D1D1D),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class EditableContentCard extends StatefulWidget {
-  final String title;
-  final String startTime;
-  final String endTime;
-  final String type;
-  final File? file;
-  final bool isEditing;
+  final Map<String, dynamic> content;
+  final int index;
+  final bool isTablet;
   final Function(String, String, String) onSave;
   final VoidCallback onFilePick;
   final VoidCallback onDelete;
 
   const EditableContentCard({
     Key? key,
-    required this.title,
-    required this.startTime,
-    required this.endTime,
-    required this.type,
-    this.file,
-    required this.isEditing,
+    required this.content,
+    required this.index,
+    required this.isTablet,
     required this.onSave,
     required this.onFilePick,
     required this.onDelete,
@@ -1165,14 +1292,22 @@ class _EditableContentCardState extends State<EditableContentCard> {
   late TextEditingController _startTimeController;
   late TextEditingController _endTimeController;
   bool _isPlaying = false;
+  bool _isSwitchActive = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.title);
-    _startTimeController = TextEditingController(text: widget.startTime);
-    _endTimeController = TextEditingController(text: widget.endTime);
+    _titleController = TextEditingController(text: widget.content['title'] as String);
+    _startTimeController = TextEditingController(text: widget.content['startTime'] as String);
+    _endTimeController = TextEditingController(text: widget.content['endTime'] as String);
+    _isSwitchActive = widget.content['isActive'] as bool? ?? false;
   }
+
+  Color _getBorderColor() {
+    return widget.content['borderColor'] as Color? ?? const Color(0xFF5E6676);
+  }
+
+  bool get _isEditing => widget.content['isEditing'] as bool? ?? false;
 
   @override
   void dispose() {
@@ -1202,394 +1337,404 @@ class _EditableContentCardState extends State<EditableContentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
-    final isSmallScreen = screenWidth < 400;
-
-    final buttonSize = isTablet ? 48.0 : (isSmallScreen ? 38.0 : 42.0);
-    final iconSize = isTablet ? 20.0 : (isSmallScreen ? 14.0 : 18.0);
-    final spacing = isTablet ? 4.0 : (isSmallScreen ? 2.0 : 3.0);
+    final cardHeight = widget.isTablet ? 143.0 : 133.0;
+    final borderColor = _getBorderColor();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      height: isTablet ? 150 : (isSmallScreen ? 130 : 140),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF4DB6AC), width: 2),
+      margin: EdgeInsets.only(
+        left: widget.isTablet ? 13 : 8,
+        right: widget.isTablet ? 13 : 8,
+        top: widget.isTablet ? (widget.index == 0 ? 20 : 0) : (widget.index == 0 ? 15 : 0),
+        bottom: widget.isTablet ? 24 : 20,
       ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: double.infinity,
+            height: cardHeight,
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: borderColor,
+                width: 0.3,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _buildLeftSection(borderColor),
+                ),
+                if (widget.isTablet)
+                  _buildRightSection(borderColor)
+                else
+                  const SizedBox.shrink(),
+              ],
+            ),
+          ),
+          Positioned(
+            left: widget.isTablet ? 28.0 : 20.0,
+            top: -8.0,
+            child: _buildContentBadgeWithBorder(widget.index + 1, borderColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeftSection(Color borderColor) {
+    return SizedBox(
+      width: widget.isTablet ? 520.0 : double.infinity,
+      height: widget.isTablet ? 143.0 : 133.0,
       child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+        padding: EdgeInsets.only(
+          left: widget.isTablet ? 24.0 : 14.0,
+          right: widget.isTablet ? 24.0 : 14.0,
+          top: widget.isTablet ? 18.0 : 16.0,
+          bottom: widget.isTablet ? 14.0 : 12.0,
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            GestureDetector(
+              onTap: widget.onFilePick,
+              child: Container(
+                width: widget.isTablet ? 60 : 55,
+                height: widget.isTablet ? 80 : 75,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                ),
+                child: widget.content['file'] != null
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: Image.file(
+                    widget.content['file'] as File,
+                    fit: BoxFit.cover,
+                  ),
+                )
+                    : Icon(
+                  Icons.image_outlined,
+                  size: widget.isTablet ? 28 : 26,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ),
+            SizedBox(width: widget.isTablet ? 10.0 : 8.0),
             Expanded(
-              flex: 3,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Row(
-                      children: [
-                        Icon(
-                            Icons.info,
-                            size: iconSize,
-                            color: Colors.black
-                        ),
-                        SizedBox(width: spacing),
-                        Text(
-                          '1. İÇERİK',
-                          style: TextStyle(
-                            fontSize: isTablet ? 14 : (isSmallScreen ? 10 : 12),
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: spacing/2),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: widget.isEditing
-                        ? Row(
-                      children: [
-                        Icon(
-                            Icons.title,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: TextField(
-                            controller: _titleController,
-                            decoration: const InputDecoration(
-                              hintText: 'Toplantı Konusu',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 6),
-                              isDense: true,
-                            ),
-                            style: TextStyle(
-                              fontSize: isTablet ? 18 : (isSmallScreen ? 14 : 16),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Row(
-                      children: [
-                        Icon(
-                            Icons.title,
-                            size: iconSize,
-                            color: Colors.grey
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: Text(
-                            widget.title,
-                            style: TextStyle(
-                              fontSize: isTablet ? 18 : (isSmallScreen ? 14 : 16),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: spacing/2),
-
                   Row(
                     children: [
+                      _buildImageIcon('assets/images/icerik.png', widget.isTablet ? 18 : 16, widget.isTablet ? 16 : 14),
+                      SizedBox(width: widget.isTablet ? 6.0 : 5.0),
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                      Icons.access_time,
-                                      size: iconSize * 0.8,
-                                      color: Colors.black
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Text(
-                                    'Başlangıç',
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 12 : (isSmallScreen ? 9 : 11),
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: spacing / 2),
-                              widget.isEditing
-                                  ? Row(
-                                children: [
-                                  Icon(
-                                      Icons.play_arrow,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _startTimeController,
-                                      decoration: const InputDecoration(
-                                        hintText: '00:30:00',
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(vertical: 4),
-                                        isDense: true,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 13),
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                                  : Row(
-                                children: [
-                                  Icon(
-                                      Icons.play_arrow,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Text(
-                                    widget.startTime,
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 13),
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                        child: _isEditing
+                            ? TextField(
+                          controller: _titleController,
+                          style: TextStyle(
+                            fontSize: widget.isTablet ? 17.0 : 15,
+                            fontWeight: FontWeight.w400,
+                            color: borderColor == const Color(0xFF5E6676)
+                                ? const Color(0xFF414A5D)
+                                : const Color(0xFFA24D00),
+                            height: 0.94,
                           ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        )
+                            : Text(
+                          widget.content['title'] as String,
+                          style: TextStyle(
+                            fontSize: widget.isTablet ? 17.0 : 15,
+                            fontWeight: FontWeight.w400,
+                            color: borderColor == const Color(0xFF5E6676)
+                                ? const Color(0xFF414A5D)
+                                : const Color(0xFFA24D00),
+                            height: 0.94,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: spacing),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                      Icons.access_time,
-                                      size: iconSize * 0.8,
-                                      color: Colors.black
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Text(
-                                    'Bitiş',
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 12 : (isSmallScreen ? 9 : 11),
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: spacing / 2),
-                              widget.isEditing
-                                  ? Row(
-                                children: [
-                                  Icon(
-                                      Icons.stop,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _endTimeController,
-                                      decoration: const InputDecoration(
-                                        hintText: '00:30:00',
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(vertical: 4),
-                                        isDense: true,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 13),
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                                  : Row(
-                                children: [
-                                  Icon(
-                                      Icons.stop,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey
-                                  ),
-                                  SizedBox(width: spacing / 2),
-                                  Text(
-                                    widget.endTime,
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 13),
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _buildImageIcon('assets/images/saat.png', widget.isTablet ? 18 : 16, widget.isTablet ? 20 : 18),
+                      SizedBox(width: widget.isTablet ? 6.0 : 5.0),
+                      _buildDigitalTime(
+                        widget.content['startTime'] as String,
+                        borderColor == const Color(0xFF5E6676)
+                            ? const Color(0xFF3B4458)
+                            : const Color(0xFFA24D00),
+                        widget.isTablet,
+                        _isEditing,
+                        _isEditing ? _startTimeController : null,
                       ),
+                      SizedBox(width: widget.isTablet ? 4.0 : 3.0),
+                      _buildDigitalTime(
+                        widget.content['endTime'] as String,
+                        borderColor == const Color(0xFF5E6676)
+                            ? const Color(0xFF3B4458)
+                            : const Color(0xFFA24D00),
+                        widget.isTablet,
+                        _isEditing,
+                        _isEditing ? _endTimeController : null,
+                      ),
+                      if (!_isEditing) ...[
+                        const Spacer(),
+                        _buildToggleSwitch(),
+                      ],
                     ],
                   ),
                 ],
               ),
             ),
-
-            SizedBox(width: spacing),
-            Expanded(
-              flex: 2,
-              child: Container(
-                height: double.infinity,
-                child: widget.isEditing
-                    ? Center(
-                  child: Container(
-                    width: buttonSize * 1.1,
-                    height: buttonSize * 1.1,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey, width: 2),
-                    ),
-                    child: IconButton(
-                      onPressed: _saveContent,
-                      icon: Icon(
-                        Icons.check,
-                        size: iconSize * 1.1,
-                        color: Colors.green,
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                )
-                    : Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 2),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: buttonSize * 0.8,
-                            height: buttonSize * 0.8,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey, width: 2),
-                            ),
-                            child: IconButton(
-                              onPressed: _increaseTime,
-                              icon: Icon(
-                                Icons.add,
-                                size: iconSize * 0.8,
-                                color: Colors.black,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Container(
-                            width: buttonSize * 0.8,
-                            height: buttonSize * 0.8,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey, width: 2),
-                            ),
-                            child: IconButton(
-                              onPressed: widget.onDelete,
-                              icon: Icon(
-                                Icons.close,
-                                size: iconSize * 0.8,
-                                color: Colors.red,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Container(
-                      margin: const EdgeInsets.only(top: 2),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: buttonSize * 0.8,
-                            height: buttonSize * 0.8,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey, width: 2),
-                            ),
-                            child: IconButton(
-                              onPressed: _decreaseTime,
-                              icon: Icon(
-                                Icons.remove,
-                                size: iconSize * 0.8,
-                                color: Colors.black,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Container(
-                            width: buttonSize * 0.8,
-                            height: buttonSize * 0.8,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey, width: 2),
-                            ),
-                            child: IconButton(
-                              onPressed: _togglePlay,
-                              icon: Icon(
-                                _isPlaying ? Icons.pause : Icons.play_arrow,
-                                size: iconSize * 0.8,
-                                color: const Color(0xFF616161),
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDigitalTime(String time, Color textColor, bool isTablet, bool isEditing, [TextEditingController? controller]) {
+    if (isEditing && controller != null) {
+      return SizedBox(
+        width: isTablet ? 65.0 : 50.0,
+        child: TextField(
+          controller: controller,
+          style: TextStyle(
+            fontSize: isTablet ? 14.0 : 12,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'monospace',
+            color: textColor,
+            height: 0.70,
+            letterSpacing: 1.0,
+          ),
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < time.length; i++)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: time[i] == ':' ? 1.0 : 0.5),
+            child: Text(
+              time[i],
+              style: TextStyle(
+                fontSize: isTablet ? 14.0 : 12,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'monospace',
+                color: textColor,
+                height: 0.70,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildImageIcon(String imagePath, double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Image.asset(
+        imagePath,
+        width: width * 0.7,
+        height: height * 0.7,
+        color: const Color(0xFF3C465A),
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildToggleSwitch() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isSwitchActive = !_isSwitchActive;
+        });
+      },
+      child: Container(
+        width: widget.isTablet ? 30 : 26,
+        height: widget.isTablet ? 14 : 12,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: _isSwitchActive ? const Color(0xFF196E64) : Colors.grey[300],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Align(
+          alignment: _isSwitchActive ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: widget.isTablet ? 10 : 8,
+            height: widget.isTablet ? 10 : 8,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentBadgeWithBorder(int number, Color borderColor) {
+    final fontSize = widget.isTablet ? 12.0 : 10.0;
+    final verticalPadding = widget.isTablet ? 3.0 : 2.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isTablet ? 10 : 8,
+        vertical: verticalPadding,
+      ),
+      child: Text(
+        '$number. İÇERİK',
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF1D1D1D),
+          height: 1.037037037037037,
+          backgroundColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRightSection(Color borderColor) {
+    return Container(
+      width: widget.isTablet ? 120 : 0,
+      height: widget.isTablet ? 143 : 0,
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isTablet ? 4 : 0,
+        vertical: widget.isTablet ? 10 : 0,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: widget.isTablet ? 48 : 0,
+                height: widget.isTablet ? 57 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFEFF9),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add,
+                    size: widget.isTablet ? 18 : 16,
+                    color: const Color(0xFF1D1D1D),
+                  ),
+                ),
+              ),
+              Container(
+                width: widget.isTablet ? 48 : 0,
+                height: widget.isTablet ? 56 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFEFF9),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(10),
+                    bottomRight: Radius.circular(10),
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.remove,
+                    size: widget.isTablet ? 18 : 16,
+                    color: const Color(0xFF1D1D1D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(width: widget.isTablet ? 6 : 0),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: widget.onDelete,
+                child: Container(
+                  width: widget.isTablet ? 48 : 0,
+                  height: widget.isTablet ? 57 : 0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE5E5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF52596C),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.close,
+                      size: widget.isTablet ? 18 : 16,
+                      color: Colors.red[900],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: widget.isTablet ? 2 : 0),
+              GestureDetector(
+                onTap: _togglePlay,
+                child: Container(
+                  width: widget.isTablet ? 48 : 0,
+                  height: widget.isTablet ? 56 : 0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F4F4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF52596C),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: widget.isTablet ? 18 : 16,
+                      color: const Color(0xFF1D1D1D),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

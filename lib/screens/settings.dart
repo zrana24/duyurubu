@@ -29,17 +29,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        toolbarHeight: 60,
-        automaticallyImplyLeading: false,
-        flexibleSpace: Container(
-          width: double.infinity,
-          height: double.infinity,
-          child: ImageWidget(activePage: "settings"),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              height: 60,
+              width: double.infinity,
+              child: ImageWidget(activePage: "settings"),
+            ),
+            Expanded(
+              child: isTablet ? _buildTabletLayout() : _buildMobileLayout(),
+            ),
+          ],
         ),
       ),
-      body: isTablet ? _buildTabletLayout() : _buildMobileLayout(),
     );
   }
 
@@ -78,6 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     languageProvider: languageProvider,
                     fillAvailableSpace: true,
                     showVolume: true,
+                    isMainScreen: true,
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.02),
@@ -102,6 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     languageProvider: languageProvider,
                     fillAvailableSpace: true,
                     showVolume: false,
+                    isMainScreen: false,
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.02),
@@ -126,6 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     languageProvider: languageProvider,
                     fillAvailableSpace: true,
                     showVolume: false,
+                    isMainScreen: false,
                   ),
                 ),
               ],
@@ -176,6 +182,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           isTablet: true,
                           fillAvailableSpace: true,
                           showVolume: true,
+                          isMainScreen: true,
                         ),
                       ),
                       SizedBox(width: screenWidth * 0.02),
@@ -199,6 +206,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           isTablet: true,
                           fillAvailableSpace: true,
                           showVolume: false,
+                          isMainScreen: false,
                         ),
                       ),
                       SizedBox(width: screenWidth * 0.02),
@@ -222,6 +230,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           isTablet: true,
                           fillAvailableSpace: true,
                           showVolume: false,
+                          isMainScreen: false,
                         ),
                       ),
                     ],
@@ -246,6 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
         bool isTablet = false,
         bool fillAvailableSpace = false,
         bool showVolume = true,
+        bool isMainScreen = false,
       }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final cardPadding = isTablet ? 12.0 : 16.0;
@@ -278,7 +288,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             width: double.infinity,
             decoration: BoxDecoration(
-              color: const Color(0xFF36C8BD),
+              color: const Color(0xFF00D0C6),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
@@ -286,8 +296,15 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.devices_other,
-                    color: const Color(0xFF009086),
+                isMainScreen
+                    ? Image.asset(
+                  'assets/images/kursu.png',
+                  width: isTablet ? 22 : 24,
+                  height: isTablet ? 22 : 24,
+                  color: const Color(0xFF1D7269),
+                )
+                    : Icon(Icons.devices_other,
+                    color: const Color(0xFF1D7269),
                     size: isTablet ? 18 : 20),
                 SizedBox(width: isTablet ? 6 : 8),
                 Expanded(
@@ -296,7 +313,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: isTablet ? 16 : 18,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF009086),
+                      color: const Color(0xFF1D7269),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -403,10 +420,11 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ),
                             SizedBox(width: isTablet ? 12 : 16),
-                            Icon(
-                              brightnessValue > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
+                            Image.asset(
+                              'assets/images/parlaklik.png',
+                              width: isTablet ? 28 : 32,
+                              height: isTablet ? 28 : 32,
                               color: Color(0xFF9E9E9E),
-                              size: isTablet ? 28 : 32,
                             ),
                           ],
                         ),
@@ -526,10 +544,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                               SizedBox(width: isTablet ? 12 : 16),
-                              Icon(
-                                volumeValue > 0 ? Icons.volume_up : Icons.volume_off,
+                              Image.asset(
+                                'assets/images/ses.png',
+                                width: isTablet ? 28 : 32,
+                                height: isTablet ? 28 : 32,
                                 color: Color(0xFF9E9E9E),
-                                size: isTablet ? 28 : 32,
                               ),
                             ],
                           ),

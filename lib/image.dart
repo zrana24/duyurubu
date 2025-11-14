@@ -81,7 +81,7 @@ class _ImageWidgetState extends State<ImageWidget> {
                 _buildNavButton(
                   context: context,
                   text: languageProvider.getTranslation('content_management') ?? "İÇERİK YÖNETİMİ",
-                  icon: Icons.content_paste_outlined,
+                  icon: 'assets/images/icerik.png', 
                   isActive: widget.activePage == "management",
                   onTap: () {
                     Navigator.push(
@@ -95,7 +95,7 @@ class _ImageWidgetState extends State<ImageWidget> {
                 _buildNavButton(
                   context: context,
                   text: languageProvider.getTranslation('settings') ?? "AYARLAR",
-                  icon: Icons.settings_outlined,
+                  icon: Icons.settings_outlined, 
                   isActive: widget.activePage == "settings",
                   onTap: () {
                     Navigator.push(
@@ -108,7 +108,7 @@ class _ImageWidgetState extends State<ImageWidget> {
                 Spacer(),
                 _buildIconButton(
                   context: context,
-                  icon: Icons.graphic_eq,
+                  icon: 'assets/images/eslestirme.png', 
                   label: languageProvider.getTranslation('pairing') ?? "EŞLEŞTİRME",
                   isActive: isConnectPage,
                   onTap: () {
@@ -122,7 +122,7 @@ class _ImageWidgetState extends State<ImageWidget> {
                 SizedBox(width: 12),
                 _buildIconButton(
                   context: context,
-                  icon: Icons.language,
+                  icon: 'assets/images/dil.png', 
                   label: languageProvider.getTranslation('language_selection') ?? "DİL SEÇİMİ",
                   isActive: widget.activePage == "language",
                   onTap: () {
@@ -143,7 +143,7 @@ class _ImageWidgetState extends State<ImageWidget> {
   Widget _buildNavButton({
     required BuildContext context,
     required String text,
-    required IconData icon,
+    required dynamic icon, 
     required bool isActive,
     required VoidCallback onTap,
   }) {
@@ -161,11 +161,23 @@ class _ImageWidgetState extends State<ImageWidget> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 18,
-              ),
+              
+              if (icon is IconData)
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 18,
+                )
+              else if (icon is String)
+                Container(
+                  width: 18,
+                  height: 18,
+                  child: Image.asset(
+                    icon,
+                    color: Colors.white,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               SizedBox(width: 8),
               Text(
                 text,
@@ -186,7 +198,7 @@ class _ImageWidgetState extends State<ImageWidget> {
 
   Widget _buildIconButton({
     required BuildContext context,
-    required IconData icon,
+    required String icon, 
     required String label,
     required bool isActive,
     required VoidCallback onTap,
@@ -208,10 +220,14 @@ class _ImageWidgetState extends State<ImageWidget> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: isActive ? Colors.white : Color(0xFF176D63),
-                size: 16,
+              Container(
+                width: 16,
+                height: 16,
+                child: Image.asset(
+                  icon,
+                  color: isActive ? Colors.white : Color(0xFF176D63),
+                  fit: BoxFit.contain,
+                ),
               ),
               SizedBox(width: 8),
               Text(

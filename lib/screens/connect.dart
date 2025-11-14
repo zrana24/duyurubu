@@ -538,96 +538,95 @@ class _ConnectPageState extends State<ConnectPage> {
       builder: (context, languageProvider, child) {
         return Scaffold(
           backgroundColor: Color(0xFFE0E0E0),
-          body: Column(
-            children: [
-              Container(
-                height: 60,
-                width: double.infinity,
-                child: ImageWidget(activePage: "connect"),
-              ),
-              if (_bluetoothState != blue_plus.BluetoothAdapterState.on)
+          body: SafeArea(
+            child: Column(
+              children: [
                 Container(
+                  height: 60,
                   width: double.infinity,
-                  padding: EdgeInsets.all(8),
-                  color: Colors.red.withOpacity(0.1),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bluetooth_disabled, color: Colors.red, size: 16),
-                      SizedBox(width: 8),
-                      Text('Bluetooth kapalı - Lütfen açın',
-                          style: TextStyle(color: Colors.red, fontSize: 12)),
-                    ],
-                  ),
+                  child: ImageWidget(activePage: "connect"),
                 ),
-              Expanded(
-                child: SafeArea(
-                  top: false,
+                if (_bluetoothState != blue_plus.BluetoothAdapterState.on)
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(8),
+                    color: Colors.red.withOpacity(0.1),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bluetooth_disabled, color: Colors.red, size: 16),
+                        SizedBox(width: 8),
+                        Text('Bluetooth kapalı - Lütfen açın',
+                            style: TextStyle(color: Colors.red, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                Expanded(
                   child: isTablet
                       ? _buildTabletLayout(languageProvider, screenSize)
                       : _buildMobileLayout(languageProvider, screenSize),
                 ),
-              ),
-              if (bluetoothProvider.isConnecting)
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: 2),
-                  color: Colors.blue.withOpacity(0.1),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                if (bluetoothProvider.isConnecting)
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 2),
+                    color: Colors.blue.withOpacity(0.1),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 10),
-                      Flexible(
-                        child: Text(
-                          languageProvider.getTranslation('pairing_connecting'),
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
+                        SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            languageProvider.getTranslation('pairing_connecting'),
+                            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _bluetoothState != blue_plus.BluetoothAdapterState.on ? null : () {
-                    if (bluetoothProvider.connectedDevice != null) {
-                      _disconnect();
-                    } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
-                      _connectToDevice(_selectedDevice!);
-                    }
-                  },
-                  icon: Icon(bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
-                      color: Colors.white, size: 22),
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      bluetoothProvider.isConnecting
-                          ? languageProvider.getTranslation('processing')
-                          : bluetoothProvider.connectedDevice != null
-                          ? languageProvider.getTranslation('disconnect')
-                          : (_selectedDevice != null)
-                          ? languageProvider.getTranslation('connect')
-                          : languageProvider.getTranslation('select_device'),
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                      textAlign: TextAlign.center,
+                      ],
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                    backgroundColor: _getButtonColor(bluetoothProvider),
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _bluetoothState != blue_plus.BluetoothAdapterState.on ? null : () {
+                      if (bluetoothProvider.connectedDevice != null) {
+                        _disconnect();
+                      } else if (_selectedDevice != null && !bluetoothProvider.isConnecting) {
+                        _connectToDevice(_selectedDevice!);
+                      }
+                    },
+                    icon: Icon(bluetoothProvider.connectedDevice != null ? Icons.link_off : Icons.bluetooth,
+                        color: Colors.white, size: 22),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        bluetoothProvider.isConnecting
+                            ? languageProvider.getTranslation('processing')
+                            : bluetoothProvider.connectedDevice != null
+                            ? languageProvider.getTranslation('disconnect')
+                            : (_selectedDevice != null)
+                            ? languageProvider.getTranslation('connect')
+                            : languageProvider.getTranslation('select_device'),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      backgroundColor: _getButtonColor(bluetoothProvider),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
