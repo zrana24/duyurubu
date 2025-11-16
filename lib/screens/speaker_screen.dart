@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import 'package:provider/provider.dart';
+import '../bluetooth_provider.dart';
 import 'management.dart';
 
 class SpeakerScreen extends StatefulWidget {
@@ -28,6 +30,9 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
     },
   ];
 
+  bool _isSending = false;
+  int? _sendingIndex;
+
   void _addSpeaker() {
     setState(() {
       _speakers.add({
@@ -44,6 +49,104 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
     setState(() {
       _speakers[index]['isActive'] = !_speakers[index]['isActive'];
     });
+  }
+
+  /// Konuşmacıyı Bluetooth üzerinden gönder
+  Future<void> _sendSpeakerViaBluetooth(int index) async {
+    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
+
+    if (bluetoothProvider.connectedDevice == null) {
+      _showSnackbar(
+        '❌ Bağlı cihaz yok! Önce bir cihaza bağlanın.',
+        Colors.red,
+        Icons.bluetooth_disabled,
+      );
+      return;
+    }
+
+    setState(() {
+      _isSending = true;
+      _sendingIndex = index;
+    });
+
+    try {
+      final speaker = _speakers[index];
+
+      print('📤 Gönderim başlıyor...');
+      print('📋 Departman: ${speaker['department']}');
+      print('👤 İsim: ${speaker['name']}');
+      print('⏰ Süre: ${speaker['time']}');
+      print('✅ Aktif: ${speaker['isActive']}');
+
+      await bluetoothProvider.sendIsimlikAdd(
+        title: speaker['department'] as String,
+        name: speaker['name'] as String,
+        toggle: "false",
+        isActive: (speaker['isActive'] as bool).toString(),
+        time: speaker['time'] as String,
+      );
+
+      print('✅ Gönderim tamamlandı!');
+
+      _showSnackbar(
+        '✅ ${speaker['name']} cihaza gönderildi',
+        Colors.green,
+        Icons.check_circle,
+      );
+
+    } catch (e) {
+      print('❌ Gönderim hatası: $e');
+
+      String errorMessage = 'Gönderim hatası';
+      if (e.toString().contains('Bluetooth bağlantısı yok')) {
+        errorMessage = 'Bluetooth bağlantısı koptu';
+      } else if (e.toString().contains('timeout')) {
+        errorMessage = 'Zaman aşımı - Cihaz yanıt vermiyor';
+      } else {
+        errorMessage = 'Hata: ${e.toString().replaceAll('Exception:', '').trim()}';
+      }
+
+      _showSnackbar(
+        '❌ $errorMessage',
+        Colors.red,
+        Icons.error,
+      );
+    } finally {
+      setState(() {
+        _isSending = false;
+        _sendingIndex = null;
+      });
+    }
+  }
+
+  void _showSnackbar(String message, Color backgroundColor, IconData icon) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 
   @override
@@ -65,7 +168,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             Container(
               width: isimlikWidth,
               height: containerHeight,
@@ -88,7 +190,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
             const SizedBox(width: 16),
-            
             Expanded(
               child: Container(
                 height: containerHeight,
@@ -143,7 +244,7 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
         border: Border(
           bottom: BorderSide(
             color: const Color(0xFF00D0C6),
-            width: 0.3, 
+            width: 0.3,
           ),
         ),
       ),
@@ -154,10 +255,19 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
         ),
         child: Row(
           children: [
-            
-            _buildLogo(isTablet),
+            Container(
+              width: isTablet ? 64 : 48,
+              height: isTablet ? 24 : 18,
+              child: Center(
+                child: Image.asset(
+                  'assets/images/logo2.png',
+                  width: isTablet ? 28 : 32,
+                  height: isTablet ? 18 : 14,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
             SizedBox(width: isTablet ? 9 : 6),
-            
             Text(
               'İSİMLİK EKRANI',
               style: TextStyle(
@@ -168,30 +278,8 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
             const Spacer(),
-            
             _buildAddButton(isTablet),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogo(bool isTablet) {
-    return Container(
-      width: isTablet ? 64 : 48,
-      height: isTablet ? 24 : 18,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: Text(
-          'LOGO',
-          style: TextStyle(
-            fontSize: isTablet ? 10 : 8,
-            color: const Color(0xFF1D7269),
-            fontWeight: FontWeight.bold,
-          ),
         ),
       ),
     );
@@ -226,10 +314,14 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
             SizedBox(width: isTablet ? 7 : 5),
-            Icon(
-              Icons.add,
-              size: isTablet ? 19 : 15,
-              color: const Color(0xFF0D7066),
+            Container(
+              width: isTablet ? 16 : 13,
+              height: isTablet ? 16 : 13,
+              child: Image.asset(
+                'assets/images/icerik.png',
+                color: const Color(0xFF0D7066),
+                fit: BoxFit.contain,
+              ),
             ),
           ],
         ),
@@ -262,7 +354,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               index,
               isTablet,
             ),
-            
             if (index < _speakers.length - 1)
               Transform.translate(
                 offset: Offset(0, isTablet ? -5.0 : -4.0),
@@ -276,7 +367,7 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
                     border: Border(
                       top: BorderSide(
                         color: const Color(0xFF00D0C6),
-                        width: 1.5, 
+                        width: 1.5,
                       ),
                     ),
                   ),
@@ -293,7 +384,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
       int index,
       bool isTablet,
       ) {
-    
     final cardHeight = isTablet ? 210.0 : 180.0;
 
     return Container(
@@ -306,27 +396,24 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          
           Container(
-            width: double.infinity, 
+            width: double.infinity,
             height: cardHeight,
             decoration: BoxDecoration(
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: speaker['borderColor'] as Color,
-                width: 0.3, 
+                width: 0.3,
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
                 Expanded(
                   flex: isTablet ? 520 : 3,
                   child: _buildLeftSection(speaker, index, isTablet),
                 ),
-                
                 if (isTablet)
                   _buildRightSection(index, isTablet, speaker['borderColor'] as Color)
                 else
@@ -334,7 +421,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ],
             ),
           ),
-          
           Positioned(
             left: isTablet ? 22.0 : 15.0,
             top: -8.0,
@@ -350,20 +436,17 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
       int index,
       bool isTablet,
       ) {
-    
     return SizedBox(
       width: isTablet ? 520.0 : double.infinity,
       height: isTablet ? 210.0 : 180.0,
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          
           Positioned(
             left: isTablet ? 32.0 : 15.0,
             top: isTablet ? 32.0 : 25.0,
-            child: _buildIcon(Icons.description, isTablet ? 20 : 18, isTablet ? 16 : 14),
+            child: _buildImageIcon('assets/images/icerik.png', isTablet ? 20 : 18, isTablet ? 16 : 14),
           ),
-          
           Positioned(
             left: isTablet ? 61.0 : 50.0,
             top: isTablet ? 32.0 : 25.0,
@@ -385,13 +468,11 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
           ),
-          
           Positioned(
             left: isTablet ? 32.0 : 15.0,
             top: isTablet ? 75.0 : 60.0,
-            child: _buildIcon(Icons.person, isTablet ? 20 : 18, isTablet ? 22 : 20),
+            child: _buildImageIcon('assets/images/konusmaci.png', isTablet ? 20 : 18, isTablet ? 22 : 20),
           ),
-          
           Positioned(
             left: isTablet ? 61.0 : 50.0,
             top: isTablet ? 75.0 : 60.0,
@@ -413,13 +494,11 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
           ),
-          
           Positioned(
             left: isTablet ? 32.0 : 15.0,
             top: isTablet ? 118.0 : 95.0,
-            child: _buildIcon(Icons.timer, isTablet ? 20 : 18, isTablet ? 22 : 20),
+            child: _buildImageIcon('assets/images/saat.png', isTablet ? 20 : 18, isTablet ? 22 : 20),
           ),
-          
           Positioned(
             left: isTablet ? 61.0 : 50.0,
             top: isTablet ? 118.0 : 95.0,
@@ -435,7 +514,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ),
           ),
-          
           Positioned(
             left: isTablet ? 420.0 : 200.0,
             top: isTablet ? 125.0 : 100.0,
@@ -446,6 +524,24 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildImageIcon(String imagePath, double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Image.asset(
+        imagePath,
+        width: width * 0.7,
+        height: height * 0.7,
+        color: const Color(0xFF3C465A),
+        fit: BoxFit.contain,
       ),
     );
   }
@@ -481,7 +577,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        
         Positioned(
           left: -300,
           right: -300,
@@ -491,7 +586,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
             color: borderColor,
           ),
         ),
-        
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: isTablet ? 8 : 6,
@@ -513,22 +607,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildIcon(IconData icon, double width, double height) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Icon(
-        icon,
-        size: width * 0.6,
-        color: const Color(0xFF3C465A),
-      ),
     );
   }
 
@@ -559,8 +637,7 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
   }
 
   Widget _buildRightSection(int index, bool isTablet, Color borderColor) {
-    
-    
+    bool isSendingThis = _isSending && _sendingIndex == index;
 
     return Container(
       width: isTablet ? 191 : 0,
@@ -579,11 +656,9 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               Container(
                 width: 78,
                 height: 90,
@@ -606,7 +681,6 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
                   ),
                 ),
               ),
-              
               Container(
                 width: 78,
                 height: 87,
@@ -631,17 +705,15 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
               ),
             ],
           ),
-          SizedBox(width: isTablet ? 13 : 8), 
-          
+          SizedBox(width: isTablet ? 13 : 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               Container(
                 width: 78,
                 height: 90,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5), 
+                  color: const Color(0xFFFFE5E5),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: const Color(0xFF52596C),
@@ -657,23 +729,38 @@ class _SpeakerScreenState extends State<SpeakerScreen> {
                 ),
               ),
               SizedBox(height: isTablet ? 3 : 2),
-
-              Container(
-                width: 78,
-                height: 87,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4F4F4),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFF52596C),
-                    width: 0.5,
+              GestureDetector(
+                onTap: isSendingThis ? null : () => _sendSpeakerViaBluetooth(index),
+                child: Container(
+                  width: 78,
+                  height: 87,
+                  decoration: BoxDecoration(
+                    color: isSendingThis
+                        ? const Color(0xFFE0E0E0)
+                        : const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF52596C),
+                      width: 0.5,
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.play_arrow,
-                    size: isTablet ? 22 : 20,
-                    color: const Color(0xFF3B4458),
+                  child: Center(
+                    child: isSendingThis
+                        ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          const Color(0xFF1976D2),
+                        ),
+                      ),
+                    )
+                        : Icon(
+                      Icons.send,
+                      size: isTablet ? 22 : 20,
+                      color: const Color(0xFF1976D2),
+                    ),
                   ),
                 ),
               ),

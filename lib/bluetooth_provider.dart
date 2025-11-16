@@ -1,32 +1,43 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
+import 'dart:convert';
+import 'dart:async';
+
+enum BluetoothConnectionState {
+  disconnected,
+  connecting,
+  connected,
+  weakSignal,
+  connectionLost
+}
 
 class BluetoothProvider with ChangeNotifier {
-  BluetoothDevice? _connectedDevice;
+  fbp.BluetoothDevice? _connectedDevice;
   bool _isConnecting = false;
-  BluetoothCharacteristic? _writeCharacteristic;
-  BluetoothCharacteristic? _readCharacteristic;
+  fbp.BluetoothCharacteristic? _writeCharacteristic;
+  fbp.BluetoothCharacteristic? _readCharacteristic;
 
   List<Map<String, String>> _speakers = [];
-
   List<Map<String, dynamic>> _contents = [];
 
-  BluetoothDevice? get connectedDevice => _connectedDevice;
+  StreamSubscription<List<int>>? _readSubscription;
+  StreamSubscription<fbp.BluetoothConnectionState>? _connectionStateSubscription;
+
+  BluetoothConnectionState _connectionState = BluetoothConnectionState.disconnected;
+
+  // Serial Port benzeri buffer mekanizması (ReadLine için)
+  StringBuffer _readBuffer = StringBuffer();
+  final StreamController<String> _lineStreamController = StreamController<String>.broadcast();
+  Stream<String> get lineStream => _lineStreamController.stream;
+
+  // Getters
+  fbp.BluetoothDevice? get connectedDevice => _connectedDevice;
   bool get isConnecting => _isConnecting;
   List<Map<String, String>> get speakers => _speakers;
   List<Map<String, dynamic>> get contents => _contents;
+  BluetoothConnectionState get connectionState => _connectionState;
 
-  void setConnecting(bool connecting) {
-    _isConnecting = connecting;
-    notifyListeners();
-  }
-
-  void setConnectedDevice(BluetoothDevice? device) {
-    _connectedDevice = device;
-    notifyListeners();
-  }
-
+  // Data management methods
   void updateSpeakers(List<Map<String, String>> newSpeakers) {
     _speakers = newSpeakers;
     notifyListeners();
@@ -53,8 +64,10 @@ class BluetoothProvider with ChangeNotifier {
   }
 
   void deleteContent(int index) {
-    _contents.removeAt(index);
-    notifyListeners();
+    if (index >= 0 && index < _contents.length) {
+      _contents.removeAt(index);
+      notifyListeners();
+    }
   }
 
   void clearContents() {
@@ -62,26 +75,59 @@ class BluetoothProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setWriteCharacteristic(BluetoothCharacteristic characteristic) {
+  // Characteristic setup
+  void setWriteCharacteristic(fbp.BluetoothCharacteristic characteristic) {
     _writeCharacteristic = characteristic;
+    notifyListeners();
   }
 
-  void setReadCharacteristic(BluetoothCharacteristic characteristic) {
+  void setReadCharacteristic(fbp.BluetoothCharacteristic characteristic) {
     _readCharacteristic = characteristic;
     _listenForData();
+    notifyListeners();
   }
 
   void _listenForData() {
-    _readCharacteristic?.onValueReceived.listen((value) {
+    _readSubscription?.cancel();
+    _readSubscription = _readCharacteristic?.onValueReceived.listen((value) {
       if (value.isNotEmpty) {
         try {
           String receivedString = utf8.decode(value);
-          Map<String, dynamic> receivedData = jsonDecode(receivedString);
-          print('Bluetoothdan gelen veri: $receivedData');
 
-          _handleReceivedData(receivedData);
+          // ReadLine benzeri işlem: buffer'a ekle ve satırları ayır
+          _readBuffer.write(receivedString);
+          String bufferContent = _readBuffer.toString();
+
+          // Satır sonu karakterlerini kontrol et (\n veya \r\n)
+          while (bufferContent.contains('\n')) {
+            int newlineIndex = bufferContent.indexOf('\n');
+            String line = bufferContent.substring(0, newlineIndex);
+            // \r karakterini temizle
+            line = line.replaceAll('\r', '');
+
+            if (line.isNotEmpty) {
+              // Satırı stream'e gönder (ReadLine benzeri)
+              _lineStreamController.add(line);
+
+              // JSON olarak parse etmeyi dene (mevcut işlevsellik için)
+              try {
+                Map<String, dynamic> receivedData = jsonDecode(line);
+                _handleReceivedData(receivedData);
+              } catch (e) {
+                // JSON değilse sadece ham satır olarak işle
+                print('📨 Gelen satır: $line');
+              }
+            }
+
+            // Buffer'dan işlenen kısmı çıkar
+            bufferContent = bufferContent.substring(newlineIndex + 1);
+          }
+
+          // Buffer'ı güncelle
+          _readBuffer.clear();
+          _readBuffer.write(bufferContent);
         } catch (e) {
-          print('Veri decode hatası: $e');
+          print('❌ Veri okuma hatası: $e');
         }
       }
     });
@@ -98,15 +144,13 @@ class BluetoothProvider with ChangeNotifier {
         });
       }
       updateSpeakers(newSpeakers);
-    }
-    else if (data.containsKey('department') && data.containsKey('name')) {
+    } else if (data.containsKey('department') && data.containsKey('name')) {
       addSpeaker({
         "title": data['department']?.toString() ?? '',
         "person": data['name']?.toString() ?? '',
         "time": data['duration']?.toString() ?? '00:00:00',
       });
-    }
-    else if (data.containsKey('operation') && data['operation'] == 1) {
+    } else if (data.containsKey('operation') && data['operation'] == 1) {
       if (data.containsKey('contents') && data['contents'] is List) {
         List<Map<String, dynamic>> newContents = [];
         for (var contentData in data['contents']) {
@@ -133,9 +177,42 @@ class BluetoothProvider with ChangeNotifier {
     }
   }
 
+  // VERİ GÖNDERME METODLARI
+
+  /// İsimlik ekleme verisi gönderir
+  Future<void> sendIsimlikAdd({
+    required String title,
+    required String name,
+    required String toggle,
+    required String isActive,
+    required String time,
+  }) async {
+    if (_connectedDevice == null || _writeCharacteristic == null) {
+      throw Exception('Bluetooth bağlantısı yok');
+    }
+
+    try {
+      Map<String, dynamic> data = {
+        "type": "isimlik_add",
+        "title": title,
+        "name": name,
+        "togle": toggle,
+        "is_active": isActive,
+        "time": time,
+      };
+
+      String jsonData = jsonEncode(data);
+      List<int> bytes = utf8.encode(jsonData);
+
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /// Konuşmacı verisi gönderir
   Future<void> sendSpeakerData(Map<String, dynamic> data) async {
     if (_connectedDevice == null || _writeCharacteristic == null) {
-      print('Bağlı cihaz veya yazma karakteristiği yok');
       return;
     }
 
@@ -143,16 +220,15 @@ class BluetoothProvider with ChangeNotifier {
       String jsonData = jsonEncode(data);
       List<int> bytes = utf8.encode(jsonData);
 
-      await _writeCharacteristic!.write(bytes);
-      print('Speaker verisi gönderildi: $jsonData');
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
     } catch (e) {
-      print('Speaker verisi gönderme hatası: $e');
+      print('Konuşmacı verisi gönderme hatası: $e');
     }
   }
 
+  /// İçerik verisi gönderir
   Future<void> sendContentData(Map<String, dynamic> data) async {
     if (_connectedDevice == null || _writeCharacteristic == null) {
-      print('Bağlı cihaz veya yazma karakteristiği yok');
       return;
     }
 
@@ -168,8 +244,7 @@ class BluetoothProvider with ChangeNotifier {
       String jsonData = jsonEncode(sendData);
       List<int> bytes = utf8.encode(jsonData);
 
-      await _writeCharacteristic!.write(bytes);
-      print('İçerik verisi gönderildi: $jsonData');
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
     } catch (e) {
       print('İçerik verisi gönderme hatası: $e');
     }
@@ -177,21 +252,16 @@ class BluetoothProvider with ChangeNotifier {
 
   Future<void> sendDeleteContent(int index) async {
     if (_connectedDevice == null || _writeCharacteristic == null) {
-      print('Bağlı cihaz veya yazma karakteristiği yok');
       return;
     }
 
     try {
-      Map<String, dynamic> sendData = {
-        "operation": 1,
-        "deleteIndex": index,
-      };
+      Map<String, dynamic> sendData = {"operation": 1, "deleteIndex": index};
 
       String jsonData = jsonEncode(sendData);
       List<int> bytes = utf8.encode(jsonData);
 
-      await _writeCharacteristic!.write(bytes);
-      print('İçerik silme gönderildi: $jsonData');
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
     } catch (e) {
       print('İçerik silme hatası: $e');
     }
@@ -199,99 +269,171 @@ class BluetoothProvider with ChangeNotifier {
 
   Future<void> requestContentData() async {
     if (_connectedDevice == null || _writeCharacteristic == null) {
-      print('Bağlı cihaz veya yazma karakteristiği yok');
       return;
     }
 
     try {
       Map<String, dynamic> requestData = {
         "operation": 1,
-        "request": "getContents"
+        "request": "getContents",
       };
 
       String jsonData = jsonEncode(requestData);
       List<int> bytes = utf8.encode(jsonData);
 
-      await _writeCharacteristic!.write(bytes);
-      print('İçerik verisi istendi: $jsonData');
-    }
-    catch (e) {
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
+    } catch (e) {
       print('İçerik verisi isteme hatası: $e');
     }
   }
 
-  Future<void> connectToDevice(BluetoothDevice device) async {
-    if (_isConnecting || _connectedDevice != null) return;
+  /// Özel JSON verisi gönderir
+  Future<void> sendCustomJson(Map<String, dynamic> data) async {
+    if (_connectedDevice == null || _writeCharacteristic == null) {
+      throw Exception('Bluetooth bağlantısı yok');
+    }
 
     try {
-      setConnecting(true);
-      await device.connect(autoConnect: false, timeout: Duration(seconds: 8));
-      _connectedDevice = device;
+      String jsonData = jsonEncode(data);
+      List<int> bytes = utf8.encode(jsonData);
 
-      List<BluetoothService> services = await device.discoverServices();
-
-      for (BluetoothService service in services) {
-        for (BluetoothCharacteristic characteristic in service.characteristics) {
-          if (characteristic.properties.write) {
-            setWriteCharacteristic(characteristic);
-          }
-
-          if (characteristic.properties.read || characteristic.properties.notify) {
-            setReadCharacteristic(characteristic);
-            if (characteristic.properties.notify) {
-              await characteristic.setNotifyValue(true);
-            }
-          }
-        }
-      }
-
-      device.connectionState.listen((state) {
-        print('Cihaz bağlantı durumu: $state');
-        if (state == BluetoothConnectionState.disconnected) {
-          _connectedDevice = null;
-          _writeCharacteristic = null;
-          _readCharacteristic = null;
-          _speakers.clear();
-          _contents.clear();
-          notifyListeners();
-        }
-      });
-
-      notifyListeners();
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
     } catch (e) {
-      print('Bağlantı hatası: $e');
-      _connectedDevice = null;
-      _writeCharacteristic = null;
-      _readCharacteristic = null;
-      _speakers.clear();
-      _contents.clear();
-      notifyListeners();
-    } finally {
-      setConnecting(false);
+      throw e;
     }
   }
 
-  Future<void> disconnect() async {
-    if (_connectedDevice != null) {
-      try {
-        await _connectedDevice!.disconnect();
-      } catch (e) {
-        print('Bağlantı kesme hatası: $e');
-      } finally {
-        _connectedDevice = null;
-        _writeCharacteristic = null;
-        _readCharacteristic = null;
-        _speakers.clear();
-        _contents.clear();
-        _isConnecting = false;
-        notifyListeners();
-      }
+  // ============================================
+  // C# Serial Port benzeri metodlar
+  // ============================================
+
+  /// WriteLineAsync benzeri: Satır sonu ile veri gönderir
+  /// C# kodundaki: await writer.WriteLineAsync(textBox1.Text);
+  Future<void> writeLine(String message) async {
+    if (_connectedDevice == null || _writeCharacteristic == null) {
+      throw Exception('Bluetooth bağlantısı yok');
     }
+
+    try {
+      // Satır sonu ekle (\r\n - C# StreamWriter ile uyumlu)
+      String lineToSend = '$message\r\n';
+      List<int> bytes = utf8.encode(lineToSend);
+
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
+      print('📤 Gönderilen satır: $message');
+    } catch (e) {
+      print('❌ Veri gönderme hatası: $e');
+      throw e;
+    }
+  }
+
+  /// WriteAsync benzeri: Satır sonu olmadan veri gönderir
+  Future<void> write(String message) async {
+    if (_connectedDevice == null || _writeCharacteristic == null) {
+      throw Exception('Bluetooth bağlantısı yok');
+    }
+
+    try {
+      List<int> bytes = utf8.encode(message);
+      await _writeCharacteristic!.write(bytes, withoutResponse: false);
+      print('📤 Gönderilen: $message');
+    } catch (e) {
+      print('❌ Veri gönderme hatası: $e');
+      throw e;
+    }
+  }
+
+  /// ReadLine benzeri: Gelen satırları dinler (Stream olarak)
+  /// C# kodundaki: string gelenMesaj = reader.ReadLine();
+  /// Kullanım: bluetoothProvider.readLine().then((line) => print('Gelen: $line'));
+  Future<String> readLine({Duration? timeout}) async {
+    if (_connectedDevice == null) {
+      throw Exception('Bluetooth bağlantısı yok');
+    }
+
+    Completer<String> completer = Completer<String>();
+    StreamSubscription<String>? subscription;
+
+    subscription = lineStream.listen(
+          (line) {
+        if (!completer.isCompleted) {
+          subscription?.cancel();
+          completer.complete(line);
+        }
+      },
+      onError: (error) {
+        if (!completer.isCompleted) {
+          subscription?.cancel();
+          completer.completeError(error);
+        }
+      },
+    );
+
+    if (timeout != null) {
+      Timer(timeout, () {
+        if (!completer.isCompleted) {
+          subscription?.cancel();
+          completer.completeError(
+            Exception('ReadLine zaman aşımına uğradı (${timeout.inSeconds} saniye)'),
+          );
+        }
+      });
+    }
+
+    try {
+      String line = await completer.future;
+      return line;
+    } finally {
+      subscription?.cancel();
+    }
+  }
+
+  /// ReadLineStream: Gelen satırları sürekli dinler
+  /// C# kodundaki while döngüsü benzeri kullanım için
+  Stream<String> get readLineStream => lineStream;
+
+  // Bağlantıyı Kesme
+  void disconnect() {
+    _connectedDevice = null;
+    _isConnecting = false;
+    _connectionState = BluetoothConnectionState.disconnected;
+
+    _writeCharacteristic = null;
+    _readCharacteristic = null;
+
+    _readSubscription?.cancel();
+    _connectionStateSubscription?.cancel();
+
+    // Buffer'ı temizle
+    _readBuffer.clear();
+
+    print('✅ Bağlantı kesildi');
+    notifyListeners();
+  }
+
+  // Bağlantı Sırasında Provider Güncelle
+  void setConnecting(bool connecting) {
+    _isConnecting = connecting;
+    if (connecting) {
+      _connectionState = BluetoothConnectionState.connecting;
+    }
+    notifyListeners();
+  }
+
+  void setConnectedDevice(fbp.BluetoothDevice device) {
+    _connectedDevice = device;
+    _isConnecting = false;
+    _connectionState = BluetoothConnectionState.connected;
+    print('✅ Bağlandı: ${device.platformName}');
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    disconnect();
+    _readSubscription?.cancel();
+    _connectionStateSubscription?.cancel();
+    _lineStreamController.close();
+    _readBuffer.clear();
     super.dispose();
   }
 }
