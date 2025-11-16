@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../language.dart';
 import '../image.dart';
-import '../bluetooth_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'connected.dart';
 
 class Management extends StatefulWidget {
   const Management({Key? key}) : super(key: key);
@@ -103,6 +103,8 @@ class SpeakerManagement extends StatefulWidget {
 }
 
 class _SpeakerManagementState extends State<SpeakerManagement> {
+  final BluetoothService _bluetoothService = BluetoothService();
+
   List<Map<String, dynamic>> _speakers = [
     {
       'department': 'Satış ve Pazarlama Müdürü',
@@ -110,49 +112,242 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
       'time': '00:30:00',
       'isEditing': false,
       'isActive': false,
-      'borderColor': const Color(0xFF5E6676),
     }
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _requestSpeakerData();
-    });
-  }
-
-  void _requestSpeakerData() {
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-    final requestData = {
-      "operation": 0,
-      "department": "",
-      "name": "",
-      "duration": ""
-    };
-    bluetoothProvider.sendSpeakerData(requestData);
-  }
-
   void _addNewSpeaker() {
+    _showAddSpeakerDialog();
+  }
+
+  void _showAddSpeakerDialog() {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    String department = '';
+    String name = '';
+    String time = '00:00:00';
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: 450,
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  ),
+                  child: AlertDialog(
+                    insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    titlePadding: EdgeInsets.fromLTRB(24, 24, 24, 24),
+                    contentPadding: EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    actionsPadding: EdgeInsets.fromLTRB(24, 0, 24, 20),
+                    content: SingleChildScrollView(
+                      physics: BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(height: 8),
+                          TextField(
+                            enabled: !isLoading,
+                            style: TextStyle(color: Colors.black),
+                            cursorColor: Colors.black,
+                            decoration: InputDecoration(
+                              labelText: 'Bölüm/Departman',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              floatingLabelStyle: TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            ),
+                            onChanged: (value) => department = value,
+                          ),
+                          SizedBox(height: 20),
+                          TextField(
+                            enabled: !isLoading,
+                            style: TextStyle(color: Colors.black),
+                            cursorColor: Colors.black,
+                            decoration: InputDecoration(
+                              labelText: 'Ad Soyad',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              floatingLabelStyle: TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            ),
+                            onChanged: (value) => name = value,
+                          ),
+                          SizedBox(height: 20),
+                          TextField(
+                            enabled: !isLoading,
+                            style: TextStyle(color: Colors.black),
+                            cursorColor: Colors.black,
+                            decoration: InputDecoration(
+                              labelText: 'Süre (HH:MM:SS)',
+                              hintText: '00:30:00',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              floatingLabelStyle: TextStyle(color: Colors.black),
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              border: OutlineInputBorder(),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            ),
+                            onChanged: (value) => time = value,
+                          ),
+                          SizedBox(height: 8),
+                          if (isLoading)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(width: 16),
+                                  Text('Bluetooth cihazına gönderiliyor...'),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: isLoading ? null : () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        child: Text('İptal'),
+                      ),
+                      ElevatedButton(
+                        onPressed: isLoading ? null : () async {
+                          
+                          if (department.trim().isEmpty || name.trim().isEmpty || time.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Lütfen tüm alanları doldurun'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 2),
+                            ));
+                            return;
+                          }
+
+                          RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$');
+                          if (!timeRegex.hasMatch(time)) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Geçersiz zaman formatı'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 2),
+                            ));
+                            return;
+                          }
+
+                          /*String? connectedAddress = BluetoothService
+                              .connectedDeviceMacAddress;
+                          print("connected address: $connectedAddress");
+
+                          if (connectedAddress == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Bluetooth cihazı bağlı değil'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 2),
+                            ));
+                            return;
+                          }*/
+
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+
+                          try {
+                            await _bluetoothService.isimlikAdd(
+                              name: name,
+                              title: department,
+                              togle: true,
+                              isActive: false,
+                              time: time,
+                              //address: connectedAddress,
+                            );
+
+                            
+                            _saveNewSpeaker(department, name, time);
+
+                            
+                            Navigator.of(context).pop();
+
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Konuşmacı başarıyla eklendi ve cihaza gönderildi'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ));
+                          } catch (e) {
+                            
+                            setDialogState(() {
+                              isLoading = false;
+                            });
+
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Hata: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 3),
+                            ));
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          backgroundColor: isLoading ? Colors.grey : Colors.grey.shade200,
+                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: Text('Ekle'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _saveNewSpeaker(String department, String name, String time) {
     setState(() {
       _speakers.add({
-        'department': 'Bölüm/Departman',
-        'name': 'Ad Soyad',
-        'time': '00:00:00',
-        'isEditing': true,
+        'department': department.trim(),
+        'name': name.trim(),
+        'time': time,
+        'isEditing': false,
         'isActive': false,
-        'borderColor': const Color(0xFF5E6676),
       });
     });
   }
 
   void _saveSpeaker(int index, String department, String name, String time) {
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-
     if (department.trim().isEmpty || name.trim().isEmpty || time.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(languageProvider.getTranslation('fill_all_fields')),
+        content: Text('Lütfen tüm alanları doldurun'),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 2),
       ));
@@ -162,24 +357,15 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
     RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$');
     if (!timeRegex.hasMatch(time)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(languageProvider.getTranslation('invalid_time')),
+        content: Text('Geçersiz zaman formatı'),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 2),
       ));
       return;
     }
 
-    final dataToSend = {
-      "operation": 0,
-      "department": department.trim(),
-      "name": name.trim(),
-      "duration": time,
-    };
-
-    bluetoothProvider.sendSpeakerData(dataToSend);
-
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${languageProvider.getTranslation('added_success')}'),
+      content: Text('Konuşmacı başarıyla güncellendi'),
       backgroundColor: Colors.green,
       duration: const Duration(seconds: 2),
     ));
@@ -191,7 +377,6 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
         'time': time,
         'isEditing': false,
         'isActive': _speakers[index]['isActive'] ?? false,
-        'borderColor': _speakers[index]['borderColor'] ?? const Color(0xFF5E6676),
       };
     });
   }
@@ -212,7 +397,6 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isTablet = screenWidth > 600;
-    final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Column(
       children: [
@@ -371,6 +555,9 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
   }
 }
 
+
+
+
 class ContentManagement extends StatefulWidget {
   const ContentManagement({Key? key}) : super(key: key);
 
@@ -387,24 +574,10 @@ class _ContentManagementState extends State<ContentManagement> {
       'type': 'document',
       'file': null,
       'isEditing': false,
-      'borderColor': const Color(0xFF5E6676),
     }
   ];
   final ImagePicker _picker = ImagePicker();
   bool _showExportSuccess = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadContentData();
-    });
-  }
-
-  void _loadContentData() {
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-    bluetoothProvider.requestContentData();
-  }
 
   void _addNewContent() {
     setState(() {
@@ -415,7 +588,6 @@ class _ContentManagementState extends State<ContentManagement> {
         'type': 'document',
         'file': null,
         'isEditing': true,
-        'borderColor': const Color(0xFF5E6676),
       });
     });
   }
@@ -511,16 +683,6 @@ class _ContentManagementState extends State<ContentManagement> {
       ));
       return;
     }
-
-    final bluetoothProvider = Provider.of<BluetoothProvider>(context, listen: false);
-    Map<String, dynamic> contentData = {
-      "title": title.trim(),
-      "startTime": startTime,
-      "endTime": endTime,
-      "file": _contents[index]['file'],
-    };
-
-    bluetoothProvider.sendContentData(contentData);
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Text('İçerik başarıyla eklendi'),

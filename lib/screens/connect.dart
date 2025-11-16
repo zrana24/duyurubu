@@ -14,7 +14,7 @@ class ConnectPage extends StatefulWidget {
   _ConnectPageState createState() => _ConnectPageState();
 }
 
-class _ConnectPageState extends State<ConnectPage> {
+class  _ConnectPageState extends State<ConnectPage> {
   final BluetoothService _bluetoothService = BluetoothService();
   blue_plus.BluetoothDevice? _selectedDevice;
   final ScrollController _pairedScrollController = ScrollController();
@@ -23,7 +23,6 @@ class _ConnectPageState extends State<ConnectPage> {
   @override
   void initState() {
     super.initState();
-    _bluetoothService.connectToCsServer("B0:DC:EF:26:3D:5F");
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeBluetooth();
     });
@@ -76,10 +75,10 @@ class _ConnectPageState extends State<ConnectPage> {
       listen: false,
     );
 
-    // Zaten bağlıysa kontrol et
     if (bluetoothProvider.connectedDevice != null) {
       String currentDevice = bluetoothProvider.connectedDevice!.platformName;
       String selectedDevice = _bluetoothService.getDeviceDisplayName(device);
+
 
       if (bluetoothProvider.connectedDevice!.remoteId == device.remoteId) {
         _showSnackbar(
@@ -240,7 +239,7 @@ class _ConnectPageState extends State<ConnectPage> {
       setState(() => _selectedDevice = null);
     }
   }
-
+  String  deviceAddress="";
   int _getSignalStrength(int? rssi) {
     if (rssi == null) return 0;
     if (rssi >= -50) return 4;
@@ -442,8 +441,7 @@ class _ConnectPageState extends State<ConnectPage> {
                         _showDisconnectConfirmDialog();
                       } else if (_selectedDevice != null &&
                           !bluetoothProvider.isConnecting) {
-
-                        String deviceAddress = _selectedDevice!.id.id;
+                        deviceAddress = BluetoothService.connectedDeviceMacAddress!;
                         await _bluetoothService.connectToCsServer(deviceAddress);
                       }
                     },
@@ -806,8 +804,14 @@ class _ConnectPageState extends State<ConnectPage> {
 
                   return InkWell(
                     onTap: canSelect
-                        ? () => setState(() => _selectedDevice = device)
+                        ? () {
+                      setState(() {
+                        _selectedDevice = device;
+                        BluetoothService.connectedDeviceMacAddress = device.remoteId.str;
+                      });
+                    }
                         : null,
+
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       margin: EdgeInsets.symmetric(

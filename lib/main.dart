@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/management.dart';
-import 'screens/speaker_screen.dart';
 import 'language.dart';
 import 'bluetooth_provider.dart';
 
