@@ -623,10 +623,42 @@ class _ContentManagementState extends State<ContentManagement> {
                   Navigator.pop(context);
                   final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
                   if (video != null) {
+                    final videoFile = File(video.path);
+
+                    try {
+                      final videoSize = await videoFile.length();
+                      final videoSizeMB = (videoSize / (1024 * 1024)).toStringAsFixed(2);
+
+                      print(" ${video.name}");
+                      print("$videoSize bytes ($videoSizeMB MB)");
+
+                      try {
+                        final bluetoothService = BluetoothService();
+                        await bluetoothService.videosend(
+                          size: "${videoSizeMB}",
+                          name: video.name,
+                        );
+                      } catch (e) {
+                        print("hata $e");
+                      }
+                    } catch (e) {
+                      print("boyut hata $e");
+                    }
+
                     setState(() {
-                      _contents[index]['file'] = File(video.path);
+                      _contents[index]['file'] = videoFile;
                       _contents[index]['type'] = 'video';
                     });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Video seçildi: ${video.name}'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    print("Video seçilmedi");
                   }
                 },
               ),
@@ -1497,6 +1529,98 @@ class _EditableContentCardState extends State<EditableContentCard> {
     print('Zaman azaltıldı');
   }
 
+  // Yeni: Dosya önizleme widget'ı
+  Widget _buildFilePreview() {
+    if (widget.content['file'] == null) {
+      return Icon(
+        Icons.image_outlined,
+        size: widget.isTablet ? 28 : 26,
+        color: Colors.grey[400],
+      );
+    }
+
+    final file = widget.content['file'] as File;
+    final fileType = widget.content['type'] as String;
+
+    // Dosya türüne göre farklı görsel göster
+    if (fileType == 'photo') {
+      // Resim dosyası
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Eğer resim yüklenemezse fallback ikon
+            return Icon(
+              Icons.broken_image,
+              size: widget.isTablet ? 28 : 26,
+              color: Colors.grey[400],
+            );
+          },
+        ),
+      );
+    } else if (fileType == 'video') {
+      // Video dosyası - video ikonu göster
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.videocam,
+                size: widget.isTablet ? 24 : 22,
+                color: Colors.red,
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Video',
+                style: TextStyle(
+                  fontSize: widget.isTablet ? 10 : 8,
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Doküman dosyası
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.description,
+                size: widget.isTablet ? 24 : 22,
+                color: Colors.blue,
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Doküman',
+                style: TextStyle(
+                  fontSize: widget.isTablet ? 10 : 8,
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cardHeight = widget.isTablet ? 143.0 : 133.0;
@@ -1573,19 +1697,7 @@ class _EditableContentCardState extends State<EditableContentCard> {
                     width: 1,
                   ),
                 ),
-                child: widget.content['file'] != null
-                    ? ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Image.file(
-                    widget.content['file'] as File,
-                    fit: BoxFit.cover,
-                  ),
-                )
-                    : Icon(
-                  Icons.image_outlined,
-                  size: widget.isTablet ? 28 : 26,
-                  color: Colors.grey[400],
-                ),
+                child: _buildFilePreview(), // Bu satırı değiştirdik
               ),
             ),
             SizedBox(width: widget.isTablet ? 10.0 : 8.0),

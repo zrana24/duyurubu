@@ -570,19 +570,22 @@ class BluetoothService {
   Future<void> videosend({
     required String size,
     required String name,
-  })async{
-    try{
+  }) async {
+    try {
       Map<String, dynamic> data = {
-        "type" : "video",
-        "size" : "aaDFDF",
-        "name" : "aaDFDD"
+        "type": "video",
+        "size": size,
+        "name": name
       };
 
+      print("isim: $name");
+      print("Boyut: $size");
+
       await sendDataToDevice(connectedDeviceMacAddress!, data);
-      print("video boyutu yollandı");
+      print("yolladı");
     }
-    catch(e){
-      print("video hata $e");
+    catch (e) {
+      print("gönderme hatası: $e");
       rethrow;
     }
   }
