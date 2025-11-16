@@ -522,6 +522,8 @@ class BluetoothService {
     }
   }
 
+  String sonuc ="";
+
   Future<void> sendDataToDevice(String macAddress, Map<String, dynamic> data) async {
     try {
       await connectToCsServer(connectedDeviceMacAddress!);
@@ -529,12 +531,10 @@ class BluetoothService {
       String jsonData = jsonEncode(data);
       _connection!.output.add(utf8.encode(jsonData + "\r\n"));
       await _connection!.output.allSent;
-
+      sonuc="success";
       print('Veri başarıyla gönderildi: $jsonData');
-      //_connection?.close();
-
-
-    } catch (e) {
+    }
+    catch (e) {
       print('Veri gönderme hatası: $e');
       _connection = null;
       throw e;
@@ -559,10 +559,9 @@ class BluetoothService {
       };
 
       await sendDataToDevice(connectedDeviceMacAddress!, data);
-      print("ekledi");
     }
     catch (e) {
-      print("hata $e");
+      print(e);
       rethrow;
     }
   }
@@ -577,9 +576,6 @@ class BluetoothService {
         "size": size,
         "name": name
       };
-
-      print("isim: $name");
-      print("Boyut: $size");
 
       await sendDataToDevice(connectedDeviceMacAddress!, data);
       print("yolladı");

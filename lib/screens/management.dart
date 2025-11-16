@@ -638,7 +638,11 @@ class _ContentManagementState extends State<ContentManagement> {
                           size: "${videoSizeMB}",
                           name: video.name,
                         );
-                      } catch (e) {
+                        if(bluetoothService.sonuc=="success"){
+
+                        }
+                      }
+                      catch (e) {
                         print("hata $e");
                       }
                     } catch (e) {
