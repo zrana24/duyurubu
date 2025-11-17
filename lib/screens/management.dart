@@ -634,18 +634,18 @@ class _ContentManagementState extends State<ContentManagement> {
 
                       try {
                         final bluetoothService = BluetoothService();
+
                         await bluetoothService.videosend(
                           size: "${videoSizeMB}",
                           name: video.name,
+                          videoPath: video.path,
                         );
-                        if(bluetoothService.sonuc=="success"){
 
-                        }
                       }
-                      catch (e) {
-                        print("hata $e");
-                      }
-                    } catch (e) {
+                      catch (e, stackTrace) { print("annen sikişyo ");
+                        print("StackTrace:\n$stackTrace"); rethrow; }
+                    }
+                    catch (e) {
                       print("boyut hata $e");
                     }
 
@@ -653,15 +653,8 @@ class _ContentManagementState extends State<ContentManagement> {
                       _contents[index]['file'] = videoFile;
                       _contents[index]['type'] = 'video';
                     });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Video seçildi: ${video.name}'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  } else {
+                  }
+                  else {
                     print("Video seçilmedi");
                   }
                 },

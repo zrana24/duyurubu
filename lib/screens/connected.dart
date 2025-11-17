@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as blue_plus;
@@ -514,15 +515,39 @@ class BluetoothService {
 
   void _handleIncomingData(String message) {
     try {
-      Map<String, dynamic> jsonData = jsonDecode(message);
+      // Backslash'ları düzelt: tek \ yerine \\ yap
+      String correctedMessage = message.replaceAll(r'\', r'\\');
+
+      Map<String, dynamic> jsonData = jsonDecode(correctedMessage);
       print('📊 JSON verisi alındı: $jsonData');
+
+      // Path'i kontrol et ve kaydet
+      if (jsonData.containsKey('path')) {
+        receivedVideoPath = jsonData['path'];
+        print('✅ Path kaydedildi: $receivedVideoPath');
+      }
+
+      // Status kontrolü
+      if (jsonData['status'] == 'ok') {
+        print('✅ İşlem başarılı');
+      }
 
     } catch (e) {
       print('❌ JSON parse hatası: $e');
+
+      try {
+        RegExp pathRegex = RegExp(r'"path":"([^"]+)"');
+        Match? match = pathRegex.firstMatch(message);
+        if (match != null) {
+          receivedVideoPath = match.group(1);
+          print('✅ Path regex ile alındı: $receivedVideoPath');
+        }
+      } catch (regexError) {
+        print('❌ Regex hatası: $regexError');
+      }
     }
   }
 
-  String sonuc ="";
 
   Future<void> sendDataToDevice(String macAddress, Map<String, dynamic> data) async {
     try {
@@ -531,7 +556,6 @@ class BluetoothService {
       String jsonData = jsonEncode(data);
       _connection!.output.add(utf8.encode(jsonData + "\r\n"));
       await _connection!.output.allSent;
-      sonuc="success";
       print('Veri başarıyla gönderildi: $jsonData');
     }
     catch (e) {
@@ -566,37 +590,97 @@ class BluetoothService {
     }
   }
 
+
   Future<void> videosend({
     required String size,
     required String name,
+    required String videoPath,
   }) async {
     try {
+      if (_connection == null || !_connection!.isConnected) {
+        throw Exception("❌ Bağlantı yok. Video gönderilemez.");
+      }
+      File videoFile = File(videoPath);
+      Uint8List fileBytes = await videoFile.readAsBytes();
+      int totalBytes = fileBytes.length;
+      // Video metadata'yı gönder
       Map<String, dynamic> data = {
         "type": "video",
-        "size": size,
+        "size": totalBytes,
         "name": name
       };
-
       await sendDataToDevice(connectedDeviceMacAddress!, data);
-      print("yolladı");
-    }
-    catch (e) {
-      print("gönderme hatası: $e");
+      print("📦 Video bilgileri gönderildi: $data");
+
+
+      if (!videoFile.existsSync()) {
+        throw Exception("❌ Video dosyası bulunamadı: $videoPath");
+      }
+
+
+      int offset = 0;
+      int chunkSize = 4096; // 4KB chunk
+
+      print("📦 Video gönderimi başlıyor. Toplam boyut: $totalBytes bytes");
+
+      while (offset < totalBytes) {
+        int bytesToSend = (offset + chunkSize > totalBytes)
+            ? totalBytes - offset
+            : chunkSize;
+
+        Uint8List chunk = fileBytes.sublist(offset, offset + bytesToSend);
+       if(_connection==null){
+         connectToCsServer(connectedDeviceMacAddress!);
+       }
+        _connection!.output.add(chunk);
+        await _connection!.output.allSent;
+
+        offset += bytesToSend;
+
+        double percent = offset / totalBytes * 100;
+        print('\r📦 Gönderiliyor... %${percent.toStringAsFixed(1)}');
+      }
+
+      print("\n✅ Video gönderildi: $name");
+
+      // Video gönderiminden sonra gelen mesajları dinle
+      StreamSubscription<Uint8List>? subscription;
+      subscription = _connection!.input!.listen((Uint8List data) {
+        String message = String.fromCharCodes(data).trim();
+        print('📨 Gelen mesaj: $message');
+
+        // İlk mesaj alındıktan sonra kapat
+        subscription?.cancel();
+      });
+      _connection!.close();
+
+
+    } catch (e, stackTrace) {
+      print("❌ Video gönderme hatası: $e");
+      print("StackTrace:\n$stackTrace");
       rethrow;
     }
   }
 
+  String? receivedVideoPath;
+
   Future<void> bilgiAdd({
-    required String name,
-    required String title,
-    required bool togle,
-    required bool isActive,
-    required String time,
-    //required String address,
+    required String meeting_title,
+    required String start_hour,
+    required bool end_hour,
+    required bool path,
+    required bool is_active,
+    required bool button_status,
   }) async {
     try {
       Map<String, dynamic> data = {
-
+        "type":"bilgi_add",
+        "meeting_title" : "Deneme",
+        "start_hour" :"05:00:00",
+        "end_hour" : "06:00:00",
+        "path" : "C:\\Users\\uzun3\\Desktop\\Kürsü\\ARNAVUTKÖY BELEDİYESİ LOGO ANİMASYONU 1440 x 1280.mp4",
+        "is_active" : "false",
+        "button_status" :"true"
       };
 
       await sendDataToDevice(connectedDeviceMacAddress!, data);
