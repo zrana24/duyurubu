@@ -485,49 +485,57 @@ class BluetoothService {
   }
 
   Future<void> connectToCsServer(String address) async {
-    while (true) {
+    int retryCount = 0;
+    while (retryCount < 3) {
       try {
-        await _connection?.close();
-        _connection = null;
+        if (_connection != null) {
+          try {
+            await _connection!.close();
+          } catch (e) {
+            print('⚠️ Eski bağlantı kapatma hatası (göz ardı): $e');
+          }
+          _connection = null;
+        }
 
         _connection = await bluetooth_serial.BluetoothConnection.toAddress(address);
-
-        print('Serial bağlantı kuruldu: $address');
+        print('✅ Serial bağlantı kuruldu: $address');
 
         _connection!.input!.listen((Uint8List data) {
           String message = String.fromCharCodes(data).trim();
           print('📨 Gelen veri: $message');
           _handleIncomingData(message);
         }).onDone(() async {
-          print('⚠️ Bağlantı kesildi! Tekrar bağlanıyor...');
+          print('⚠️ Bağlantı kesildi!');
           _connection = null;
-          await Future.delayed(Duration(seconds: 1));
         });
 
-        break;
       } catch (e) {
-        print("❌ Bağlantı hatası: $e");
-        print("⏳ 2 saniye sonra yeniden denenecek...");
-        await Future.delayed(Duration(seconds: 2));
+        retryCount++;
+        print("❌ Bağlantı hatası (deneme $retryCount/3): $e");
+        _connection = null;
+
+        if (retryCount < 3) {
+          await Future.delayed(Duration(seconds: 1));
+        } else {
+          throw Exception("3 denemede bağlantı kurulamadı");
+        }
       }
     }
   }
 
   void _handleIncomingData(String message) {
     try {
-      // Backslash'ları düzelt: tek \ yerine \\ yap
       String correctedMessage = message.replaceAll(r'\', r'\\');
 
       Map<String, dynamic> jsonData = jsonDecode(correctedMessage);
       print('📊 JSON verisi alındı: $jsonData');
 
-      // Path'i kontrol et ve kaydet
+
       if (jsonData.containsKey('path')) {
         receivedVideoPath = jsonData['path'];
         print('✅ Path kaydedildi: $receivedVideoPath');
       }
 
-      // Status kontrolü
       if (jsonData['status'] == 'ok') {
         print('✅ İşlem başarılı');
       }
@@ -551,15 +559,17 @@ class BluetoothService {
 
   Future<void> sendDataToDevice(String macAddress, Map<String, dynamic> data) async {
     try {
-      await connectToCsServer(connectedDeviceMacAddress!);
+      if (_connection == null || !_connection!.isConnected) {
+        await connectToCsServer(macAddress);
+      }
 
       String jsonData = jsonEncode(data);
       _connection!.output.add(utf8.encode(jsonData + "\r\n"));
       await _connection!.output.allSent;
-      print('Veri başarıyla gönderildi: $jsonData');
+      print('✅ Veri başarıyla gönderildi: $jsonData');
     }
     catch (e) {
-      print('Veri gönderme hatası: $e');
+      print('❌ Veri gönderme hatası: $e');
       _connection = null;
       throw e;
     }
@@ -595,10 +605,12 @@ class BluetoothService {
     required String size,
     required String name,
     required String videoPath,
+    Function(double)? onProgress,
   }) async {
     try {
       if (_connection == null || !_connection!.isConnected) {
-        throw Exception("❌ Bağlantı yok. Video gönderilemez.");
+        print("📡 Video göndermek için bağlantı kuruluyor...");
+        await connectToCsServer(connectedDeviceMacAddress!);
       }
 
       File videoFile = File(videoPath);
@@ -610,55 +622,116 @@ class BluetoothService {
       Uint8List fileBytes = await videoFile.readAsBytes();
       int totalBytes = fileBytes.length;
 
-      // Meta bilgileri gönder
       Map<String, dynamic> data = {
         "type": "video",
         "size": totalBytes,
         "name": name
       };
+
+      print("📦 Video bilgileri gönderiliyor: $data");
       await sendDataToDevice(connectedDeviceMacAddress!, data);
-      print("📦 Video bilgileri gönderildi: $data");
+
+      await Future.delayed(Duration(milliseconds: 1000));
 
       print("📤 Video gönderimi başlıyor...");
-      print("📏 Toplam Boyut: $totalBytes byte");
+      print("📏 Toplam Boyut: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB");
 
       int offset = 0;
-      int chunkSize = 4096; // 4 KB parçalar
+      int chunkSize = 512;
+
+      int lastProgressUpdate = 0;
+      DateTime startTime = DateTime.now();
 
       while (offset < totalBytes) {
+        if (_connection == null || !_connection!.isConnected) {
+          throw Exception("❌ Bağlantı koptu!");
+        }
+
         int bytesToSend = (offset + chunkSize > totalBytes)
             ? totalBytes - offset
             : chunkSize;
 
         Uint8List chunk = fileBytes.sublist(offset, offset + bytesToSend);
 
-        _connection!.output.add(chunk);
-        await _connection!.output.allSent;
+        try {
+          _connection!.output.add(chunk);
+          await _connection!.output.allSent;
+
+          await Future.delayed(Duration(milliseconds: 5));
+
+        } catch (e) {
+          print("❌ Chunk gönderme hatası: $e");
+          throw Exception("Veri gönderimi başarısız: $e");
+        }
 
         offset += bytesToSend;
-
         double percent = offset / totalBytes * 100;
 
-        print(
-            "📤 Gönderilen: $offset / $totalBytes byte (${percent.toStringAsFixed(2)}%)");
+        int currentProgress = (percent / 5).floor();
+        if (currentProgress > lastProgressUpdate || offset == totalBytes) {
+          lastProgressUpdate = currentProgress;
 
-        await Future.delayed(Duration(milliseconds: 10));
+          Duration elapsed = DateTime.now().difference(startTime);
+          double speed = elapsed.inSeconds > 0 ? (offset / 1024 / 1024) / elapsed.inSeconds : 0;
+
+          print("📤 ${percent.toStringAsFixed(1)}% (${(offset / 1024 / 1024).toStringAsFixed(2)} MB) - ${speed.toStringAsFixed(2)} MB/s");
+
+          if (onProgress != null) {
+            onProgress(percent);
+          }
+        }
       }
 
+      Duration totalTime = DateTime.now().difference(startTime);
+      double avgSpeed = totalTime.inSeconds > 0 ? (totalBytes / 1024 / 1024) / totalTime.inSeconds : 0;
+
       print("\n✅ Video tamamen gönderildi: $name");
+      print("📊 ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB - Süre: ${totalTime.inSeconds}s - Ort. Hız: ${avgSpeed.toStringAsFixed(2)} MB/s");
 
-      StreamSubscription<Uint8List>? subscription;
-      subscription = _connection!.input!.listen((Uint8List data) {
-        String message = String.fromCharCodes(data).trim();
-        print('📨 Gelen mesaj: $message');
+      try {
+        final completer = Completer<void>();
+        StreamSubscription<Uint8List>? subscription;
 
-        subscription?.cancel();
-      });
+        Timer? timeoutTimer = Timer(Duration(seconds: 15), () {
+          print('⚠️ Sunucu yanıtı timeout');
+          subscription?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        });
 
-      _connection!.close();
+        subscription = _connection?.input?.listen((Uint8List data) {
+          String message = String.fromCharCodes(data).trim();
+          print('📨 Sunucu yanıtı: $message');
+
+          try {
+            Map<String, dynamic> response = jsonDecode(message);
+            if (response.containsKey('path')) {
+              receivedVideoPath = response['path'];
+              print('✅ Video yolu alındı: $receivedVideoPath');
+            }
+          } catch (e) {
+            print('⚠️ Yanıt parse hatası: $e');
+          }
+
+          timeoutTimer?.cancel();
+          subscription?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        });
+
+        await completer.future;
+      } catch (e) {
+        print('⚠️ Yanıt bekleme hatası: $e');
+      }
+
     } catch (e, stackTrace) {
       print("❌ Video gönderme hatası: $e");
       print("StackTrace:\n$stackTrace");
+
+      _connection = null;
+
       rethrow;
     }
   }
@@ -668,32 +741,28 @@ class BluetoothService {
   Future<void> bilgiAdd({
     required String meeting_title,
     required String start_hour,
-    required bool end_hour,
-    required bool path,
-    required bool is_active,
-    required bool button_status,
+    required String end_hour,
   }) async {
     try {
       Map<String, dynamic> data = {
         "type":"bilgi_add",
-        "meeting_title" : "Deneme",
-        "start_hour" :"05:00:00",
-        "end_hour" : "06:00:00",
-        "path" : "C:\\Users\\uzun3\\Desktop\\Kürsü\\ARNAVUTKÖY BELEDİYESİ LOGO ANİMASYONU 1440 x 1280.mp4",
-        "is_active" : "false",
-        "button_status" :"true"
+        "meeting_title" : meeting_title,
+        "start_hour" :start_hour,
+        "end_hour" : end_hour,
+        "path" : receivedVideoPath,
+        "is_active" : false,
+        "button_status" :false
       };
 
       await sendDataToDevice(connectedDeviceMacAddress!, data);
-      print("ekledi");
+      print("✅ Bilgi başarıyla eklendi");
     }
     catch (e) {
-      print("hata $e");
+      print("❌ Bilgi ekleme hatası: $e");
       rethrow;
     }
   }
 
-  // Cleanup
   void dispose() {
     _continuousScanTimer?.cancel();
     _connectionSubscription?.cancel();
@@ -707,7 +776,6 @@ class BluetoothService {
   }
 }
 
-// Bluetooth Bağlantı Sayfası
 class BluetoothConnectionPage extends StatefulWidget {
   @override
   _BluetoothConnectionPageState createState() => _BluetoothConnectionPageState();

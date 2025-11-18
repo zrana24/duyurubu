@@ -261,19 +261,6 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
                             return;
                           }
 
-                          /*String? connectedAddress = BluetoothService
-                              .connectedDeviceMacAddress;
-                          print("connected address: $connectedAddress");
-
-                          if (connectedAddress == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Bluetooth cihazı bağlı değil'),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 2),
-                            ));
-                            return;
-                          }*/
-
                           setDialogState(() {
                             isLoading = true;
                           });
@@ -285,15 +272,11 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
                               togle: true,
                               isActive: false,
                               time: time,
-                              //address: connectedAddress,
                             );
-
 
                             _saveNewSpeaker(department, name, time);
 
-
                             Navigator.of(context).pop();
-
 
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text('Konuşmacı başarıyla eklendi ve cihaza gönderildi'),
@@ -305,7 +288,6 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
                             setDialogState(() {
                               isLoading = false;
                             });
-
 
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text('Hata: ${e.toString()}'),
@@ -566,6 +548,7 @@ class ContentManagement extends StatefulWidget {
 }
 
 class _ContentManagementState extends State<ContentManagement> {
+  final BluetoothService _bluetoothService = BluetoothService();
   List<Map<String, dynamic>> _contents = [
     {
       'title': 'Küresel Isınma Toplantısına Hoş Geldiniz',
@@ -629,8 +612,8 @@ class _ContentManagementState extends State<ContentManagement> {
                       final videoSize = await videoFile.length();
                       final videoSizeMB = (videoSize / (1024 * 1024)).toStringAsFixed(2);
 
-                      print(" ${video.name}");
-                      print("$videoSize bytes ($videoSizeMB MB)");
+                      print("Video: ${video.name}");
+                      print("Boyut: $videoSize bytes ($videoSizeMB MB)");
 
                       try {
                         final bluetoothService = BluetoothService();
@@ -642,11 +625,14 @@ class _ContentManagementState extends State<ContentManagement> {
                         );
 
                       }
-                      catch (e, stackTrace) { print(stackTrace);
-                      print("StackTrace:\n$stackTrace"); rethrow; }
+                      catch (e, stackTrace) {
+                        print("Video gönderme hatası: $e");
+                        print("StackTrace:\n$stackTrace");
+                        rethrow;
+                      }
                     }
                     catch (e) {
-                      print("boyut hata $e");
+                      print("Video boyut hatası: $e");
                     }
 
                     setState(() {
@@ -692,7 +678,7 @@ class _ContentManagementState extends State<ContentManagement> {
     }
   }
 
-  void _saveContent(int index, String title, String startTime, String endTime) {
+  Future<void> _saveContent(int index, String title, String startTime, String endTime) async {
     if (title.trim().isEmpty || startTime.trim().isEmpty || endTime.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('Lütfen tüm alanları doldurun'),
@@ -713,22 +699,42 @@ class _ContentManagementState extends State<ContentManagement> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('İçerik başarıyla eklendi'),
-      backgroundColor: Colors.green,
-      duration: const Duration(seconds: 2),
-    ));
+    try {
+      await _bluetoothService.bilgiAdd(
+        meeting_title: title.trim(),
+        start_hour: startTime,
+        end_hour: endTime,
+      );
 
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('İçerik başarıyla eklendi ve cihaza gönderildi'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ));
+
+      setState(() {
+        _contents[index] = {
+          'title': title.trim(),
+          'startTime': startTime,
+          'endTime': endTime,
+          'type': _contents[index]['type'],
+          'file': _contents[index]['file'],
+          'isEditing': false,
+          'borderColor': _contents[index]['borderColor'] ?? const Color(0xFF5E6676),
+        };
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Hata: ${e.toString()}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ));
+    }
+  }
+
+  void _cancelEdit(int index) {
     setState(() {
-      _contents[index] = {
-        'title': title.trim(),
-        'startTime': startTime,
-        'endTime': endTime,
-        'type': _contents[index]['type'],
-        'file': _contents[index]['file'],
-        'isEditing': false,
-        'borderColor': _contents[index]['borderColor'] ?? const Color(0xFF5E6676),
-      };
+      _contents[index]['isEditing'] = false;
     });
   }
 
@@ -949,6 +955,7 @@ class _ContentManagementState extends State<ContentManagement> {
                       index: index,
                       isTablet: isTablet,
                       onSave: (title, startTime, endTime) => _saveContent(index, title, startTime, endTime),
+                      onCancel: () => _cancelEdit(index),
                       onDelete: () => _deleteContent(index),
                       onFilePick: () => _pickFile(index),
                     ),
@@ -1461,6 +1468,7 @@ class EditableContentCard extends StatefulWidget {
   final int index;
   final bool isTablet;
   final Function(String, String, String) onSave;
+  final VoidCallback onCancel;
   final VoidCallback onFilePick;
   final VoidCallback onDelete;
 
@@ -1470,6 +1478,7 @@ class EditableContentCard extends StatefulWidget {
     required this.index,
     required this.isTablet,
     required this.onSave,
+    required this.onCancel,
     required this.onFilePick,
     required this.onDelete,
   }) : super(key: key);
@@ -1526,7 +1535,6 @@ class _EditableContentCardState extends State<EditableContentCard> {
     print('Zaman azaltıldı');
   }
 
-  // Yeni: Dosya önizleme widget'ı
   Widget _buildFilePreview() {
     if (widget.content['file'] == null) {
       return Icon(
@@ -1539,16 +1547,13 @@ class _EditableContentCardState extends State<EditableContentCard> {
     final file = widget.content['file'] as File;
     final fileType = widget.content['type'] as String;
 
-    // Dosya türüne göre farklı görsel göster
     if (fileType == 'photo') {
-      // Resim dosyası
       return ClipRRect(
         borderRadius: BorderRadius.circular(7),
         child: Image.file(
           file,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
-            // Eğer resim yüklenemezse fallback ikon
             return Icon(
               Icons.broken_image,
               size: widget.isTablet ? 28 : 26,
@@ -1558,7 +1563,6 @@ class _EditableContentCardState extends State<EditableContentCard> {
         ),
       );
     } else if (fileType == 'video') {
-      // Video dosyası - video ikonu göster
       return Container(
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.1),
@@ -1587,7 +1591,6 @@ class _EditableContentCardState extends State<EditableContentCard> {
         ),
       );
     } else {
-      // Doküman dosyası
       return Container(
         decoration: BoxDecoration(
           color: Colors.blue.withOpacity(0.1),
@@ -1694,7 +1697,7 @@ class _EditableContentCardState extends State<EditableContentCard> {
                     width: 1,
                   ),
                 ),
-                child: _buildFilePreview(), // Bu satırı değiştirdik
+                child: _buildFilePreview(),
               ),
             ),
             SizedBox(width: widget.isTablet ? 10.0 : 8.0),
@@ -1895,6 +1898,73 @@ class _EditableContentCardState extends State<EditableContentCard> {
   }
 
   Widget _buildRightSection(Color borderColor) {
+    if (_isEditing) {
+      return Container(
+        width: widget.isTablet ? 120 : 0,
+        height: widget.isTablet ? 143 : 0,
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isTablet ? 8 : 0,
+          vertical: widget.isTablet ? 10 : 0,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: _saveContent,
+              child: Container(
+                width: widget.isTablet ? 104 : 0,
+                height: widget.isTablet ? 50 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF196E64),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'KAYDET',
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 14 : 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: widget.isTablet ? 8 : 0),
+            GestureDetector(
+              onTap: widget.onCancel,
+              child: Container(
+                width: widget.isTablet ? 104 : 0,
+                height: widget.isTablet ? 50 : 0,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF52596C),
+                    width: 0.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'İPTAL',
+                    style: TextStyle(
+                      fontSize: widget.isTablet ? 14 : 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1D1D1D),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: widget.isTablet ? 120 : 0,
       height: widget.isTablet ? 143 : 0,
