@@ -600,10 +600,17 @@ class BluetoothService {
       if (_connection == null || !_connection!.isConnected) {
         throw Exception("❌ Bağlantı yok. Video gönderilemez.");
       }
+
       File videoFile = File(videoPath);
+
+      if (!videoFile.existsSync()) {
+        throw Exception("❌ Video dosyası bulunamadı: $videoPath");
+      }
+
       Uint8List fileBytes = await videoFile.readAsBytes();
       int totalBytes = fileBytes.length;
-      // Video metadata'yı gönder
+
+      // Meta bilgileri gönder
       Map<String, dynamic> data = {
         "type": "video",
         "size": totalBytes,
@@ -612,16 +619,11 @@ class BluetoothService {
       await sendDataToDevice(connectedDeviceMacAddress!, data);
       print("📦 Video bilgileri gönderildi: $data");
 
-
-      if (!videoFile.existsSync()) {
-        throw Exception("❌ Video dosyası bulunamadı: $videoPath");
-      }
-
+      print("📤 Video gönderimi başlıyor...");
+      print("📏 Toplam Boyut: $totalBytes byte");
 
       int offset = 0;
-      int chunkSize = 4096; // 4KB chunk
-
-      print("📦 Video gönderimi başlıyor. Toplam boyut: $totalBytes bytes");
+      int chunkSize = 4096; // 4 KB parçalar
 
       while (offset < totalBytes) {
         int bytesToSend = (offset + chunkSize > totalBytes)
@@ -629,32 +631,31 @@ class BluetoothService {
             : chunkSize;
 
         Uint8List chunk = fileBytes.sublist(offset, offset + bytesToSend);
-       if(_connection==null){
-         connectToCsServer(connectedDeviceMacAddress!);
-       }
+
         _connection!.output.add(chunk);
         await _connection!.output.allSent;
 
         offset += bytesToSend;
 
         double percent = offset / totalBytes * 100;
-        print('\r📦 Gönderiliyor... %${percent.toStringAsFixed(1)}');
+
+        print(
+            "📤 Gönderilen: $offset / $totalBytes byte (${percent.toStringAsFixed(2)}%)");
+
+        await Future.delayed(Duration(milliseconds: 10));
       }
 
-      print("\n✅ Video gönderildi: $name");
+      print("\n✅ Video tamamen gönderildi: $name");
 
-      // Video gönderiminden sonra gelen mesajları dinle
       StreamSubscription<Uint8List>? subscription;
       subscription = _connection!.input!.listen((Uint8List data) {
         String message = String.fromCharCodes(data).trim();
         print('📨 Gelen mesaj: $message');
 
-        // İlk mesaj alındıktan sonra kapat
         subscription?.cancel();
       });
+
       _connection!.close();
-
-
     } catch (e, stackTrace) {
       print("❌ Video gönderme hatası: $e");
       print("StackTrace:\n$stackTrace");

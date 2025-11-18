@@ -241,7 +241,7 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
                       ),
                       ElevatedButton(
                         onPressed: isLoading ? null : () async {
-                          
+
                           if (department.trim().isEmpty || name.trim().isEmpty || time.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text('Lütfen tüm alanları doldurun'),
@@ -288,25 +288,25 @@ class _SpeakerManagementState extends State<SpeakerManagement> {
                               //address: connectedAddress,
                             );
 
-                            
+
                             _saveNewSpeaker(department, name, time);
 
-                            
+
                             Navigator.of(context).pop();
 
-                            
+
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text('Konuşmacı başarıyla eklendi ve cihaza gönderildi'),
                               backgroundColor: Colors.green,
                               duration: const Duration(seconds: 2),
                             ));
                           } catch (e) {
-                            
+
                             setDialogState(() {
                               isLoading = false;
                             });
 
-                            
+
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text('Hata: ${e.toString()}'),
                               backgroundColor: Colors.red,
@@ -642,8 +642,8 @@ class _ContentManagementState extends State<ContentManagement> {
                         );
 
                       }
-                      catch (e, stackTrace) { print("annen sikişyo ");
-                        print("StackTrace:\n$stackTrace"); rethrow; }
+                      catch (e, stackTrace) { print(stackTrace);
+                      print("StackTrace:\n$stackTrace"); rethrow; }
                     }
                     catch (e) {
                       print("boyut hata $e");
